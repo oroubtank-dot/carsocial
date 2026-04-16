@@ -337,6 +337,10 @@ class HomeContent extends StatelessWidget {
             SliverToBoxAdapter(
               child: Card(
                 margin: const EdgeInsets.all(12),
+                elevation: 4,
+                shadowColor: AppColors.primary.withValues(alpha: 0.2),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundImage: NetworkImage(

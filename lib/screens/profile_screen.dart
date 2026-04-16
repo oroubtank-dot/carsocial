@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../services/points_service.dart';
+import '../constants/app_colors.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -138,6 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: Text('profile'.tr()),
         centerTitle: true,
+        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -186,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF0066CC),
+                                    color: AppColors.primary,
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -244,7 +246,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                     const SizedBox(height: 24),
 
-                    // ========== بطاقة النقاط والمستوى (الجديد) ==========
+                    // ========== بطاقة النقاط والمستوى ==========
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(16),
@@ -347,18 +349,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // بطاقة معلومات الحساب
                     Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
+                      elevation: 3,
+                      shadowColor: Colors.black.withValues(alpha: 0.1),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: Column(
                         children: [
                           ListTile(
                             leading: const Icon(Icons.email,
-                                color: Color(0xFF0066CC)),
+                                color: AppColors.primary),
                             title: Text('email'.tr()),
                             subtitle: Text(_email),
                           ),
                           const Divider(height: 1),
                           ListTile(
                             leading: const Icon(Icons.calendar_today,
-                                color: Color(0xFF0066CC)),
+                                color: AppColors.primary),
                             title: Text('join_date'.tr()),
                             subtitle: Text(_creationTime != null
                                 ? '${_creationTime!.day}/${_creationTime!.month}/${_creationTime!.year}'
@@ -367,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const Divider(height: 1),
                           ListTile(
                             leading: const Icon(Icons.card_membership,
-                                color: Color(0xFF0066CC)),
+                                color: AppColors.primary),
                             title: Text('account_type'.tr()),
                             subtitle: Text('free'.tr()),
                           ),

@@ -180,6 +180,10 @@ ${'download_app'.tr()}: CarSocial
                       await _submitRating(postId, rating);
                     }
                   : null,
+              style: ElevatedButton.styleFrom(
+                elevation: 2,
+                shadowColor: AppColors.secondary.withValues(alpha: 0.3),
+              ),
               child: Text('submit'.tr()),
             ),
           ],
@@ -286,6 +290,8 @@ ${'download_app'.tr()}: CarSocial
 
     return Card(
       margin: const EdgeInsets.all(8),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),
