@@ -172,5 +172,6 @@
   "continue_as_guest": "Continue as Guest",
   "login_required": "Login required to perform this action",
   "services": "Services",
+  "media": "Media",
   "link_copied": "Link copied to clipboard"
 }

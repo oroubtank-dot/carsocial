@@ -172,5 +172,6 @@
   "continue_as_guest": "الدخول كزائر",
   "login_required": "يجب تسجيل الدخول للقيام بهذا الإجراء",
   "link_copied": "تم نسخ الرابط",
-  "services": "الخدمات"
+  "services": "الخدمات",
+  "media": "الوسائط"
 }

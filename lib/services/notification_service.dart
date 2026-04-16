@@ -1,71 +1,69 @@
+import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationService {
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
+  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
-  static Future<void> sendNotification({
-    required String toUserId,
-    required String type,
-    required String title,
-    required String body,
-    String? postId,
-  }) async {
-    final fromUser = _auth.currentUser;
-    if (fromUser == null) return;
+  static Future<void> initialize() async {
+    await _fcm.requestPermission();
 
-    await _firestore.collection('notifications').add({
-      'userId': toUserId,
-      'fromId': fromUser.uid,
-      'fromName': fromUser.displayName ?? 'مستخدم',
-      'type': type,
-      'title': title,
-      'body': body,
-      'postId': postId,
-      'read': false,
-      'timestamp': FieldValue.serverTimestamp(),
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings iosSettings =
+        DarwinInitializationSettings();
+    const InitializationSettings settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    await _localNotifications.initialize(settings);
+
+    String? token = await _fcm.getToken();
+    debugPrint('FCM Token: $token');
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showNotification(message);
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('Notification tapped: ${message.data}');
     });
   }
 
-  static Future<void> sendLikeNotification({
-    required String toUserId,
-    required String postId,
-  }) async {
-    await sendNotification(
-      toUserId: toUserId,
-      type: 'like',
-      title: 'إعجاب جديد',
-      body: 'أعجب ${_auth.currentUser?.displayName ?? 'مستخدم'} بمنشورك',
-      postId: postId,
+  static Future<void> _showNotification(RemoteMessage message) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'carsocial_channel',
+          'CarSocial Notifications',
+          importance: Importance.high,
+          priority: Priority.high,
+        );
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _localNotifications.show(
+      message.hashCode,
+      message.notification?.title,
+      message.notification?.body,
+      details,
     );
   }
 
-  static Future<void> sendCommentNotification({
-    required String toUserId,
-    required String postId,
-    required String comment,
+  static Future<void> sendNotification({
+    required String userId,
+    required String title,
+    required String body,
   }) async {
-    await sendNotification(
-      toUserId: toUserId,
-      type: 'comment',
-      title: 'تعليق جديد',
-      body: 'علق ${_auth.currentUser?.displayName ?? 'مستخدم'}: "$comment"',
-      postId: postId,
-    );
+    await FirebaseFirestore.instance.collection('notifications').add({
+      'userId': userId,
+      'title': title,
+      'body': body,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
-
-  static Future<void> sendFollowNotification(String toUserId) async {
-    await sendNotification(
-      toUserId: toUserId,
-      type: 'follow',
-      title: 'متابع جديد',
-      body: 'بدأ ${_auth.currentUser?.displayName ?? 'مستخدم'} بمتابعتك',
-    );
-  }
-  static Future<void> addPoints(String userId, int points) async {
-  await _firestore.collection('users').doc(userId).update({
-    'points': FieldValue.increment(points),
-  });
-}
 }

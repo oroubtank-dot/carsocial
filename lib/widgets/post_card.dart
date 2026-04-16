@@ -4,21 +4,118 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   final DocumentSnapshot post;
 
   const PostCard({super.key, required this.post});
 
-  Future<void> _callPhone(String phone) async {
+  @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard> {
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
+  bool _isSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initVideo();
+    _checkIfSaved();
+  }
+
+  void _initVideo() {
+    final data = widget.post.data() as Map<String, dynamic>;
+    if (data['mediaType'] == 'video' &&
+        data['mediaUrls'] != null &&
+        data['mediaUrls'].isNotEmpty) {
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(data['mediaUrls'][0]),
+      );
+      _videoController!.initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+      });
+    }
+  }
+
+  Future<void> _checkIfSaved() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('saved_posts')
+        .doc(widget.post.id)
+        .get();
+
+    if (mounted) {
+      setState(() {
+        _isSaved = doc.exists;
+      });
+    }
+  }
+
+  Future<void> _toggleSavePost() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('يجب تسجيل الدخول أولاً')));
+      return;
+    }
+
+    final savedRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('saved_posts')
+        .doc(widget.post.id);
+
+    if (_isSaved) {
+      await savedRef.delete();
+      setState(() {
+        _isSaved = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ تم إزالة من المحفوظات')),
+        );
+      }
+    } else {
+      await savedRef.set({
+        'postId': widget.post.id,
+        'savedAt': FieldValue.serverTimestamp(),
+      });
+      setState(() {
+        _isSaved = true;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('✅ تم الحفظ في المفضلة')));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoController?.dispose();
+    super.dispose();
+  }
+
+  void _callPhone(String phone) async {
     final url = Uri.parse('tel:$phone');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
     }
   }
 
-  Future<void> _openWhatsApp(String phone) async {
-    // إزالة أي حروف غير رقمية
+  void _openWhatsApp(String phone) async {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final url = Uri.parse('https://wa.me/$cleanPhone');
     if (await canLaunchUrl(url)) {
@@ -81,7 +178,6 @@ ${'download_app'.tr()}: CarSocial
                   ? () async {
                       Navigator.pop(context);
                       await _submitRating(postId, rating);
-                      // لا نستخدم context هنا لأنها قد تكون غير موجودة
                     }
                   : null,
               child: Text('submit'.tr()),
@@ -186,7 +282,7 @@ ${'download_app'.tr()}: CarSocial
 
   @override
   Widget build(BuildContext context) {
-    final data = post.data() as Map<String, dynamic>;
+    final data = widget.post.data() as Map<String, dynamic>;
 
     return Card(
       margin: const EdgeInsets.all(8),
@@ -232,9 +328,9 @@ ${'download_app'.tr()}: CarSocial
                   icon: const Icon(Icons.more_vert),
                   onSelected: (value) {
                     if (value == 'rate') {
-                      _showRatingDialog(context, post.id);
+                      _showRatingDialog(context, widget.post.id);
                     } else if (value == 'report') {
-                      _reportPost(context, post.id);
+                      _reportPost(context, widget.post.id);
                     }
                   },
                   itemBuilder: (context) => [
@@ -288,26 +384,44 @@ ${'download_app'.tr()}: CarSocial
                 ),
               ),
             ],
+            const SizedBox(height: 12),
+
+            // عرض الفيديو أو الصور
             if (data['mediaUrls'] != null &&
                 (data['mediaUrls'] as List).isNotEmpty) ...[
-              const SizedBox(height: 12),
-              if (data['mediaType'] == 'video')
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.play_circle_outline,
-                      size: 50,
-                      color: Colors.grey,
+              if (data['mediaType'] == 'video' &&
+                  _videoController != null &&
+                  _isVideoInitialized)
+                Column(
+                  children: [
+                    AspectRatio(
+                      aspectRatio: _videoController!.value.aspectRatio,
+                      child: VideoPlayer(_videoController!),
                     ),
-                  ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            _videoController!.value.isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              if (_videoController!.value.isPlaying) {
+                                _videoController!.pause();
+                              } else {
+                                _videoController!.play();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 )
-              else
+              else if (data['mediaType'] == 'image')
                 SizedBox(
                   height: 200,
                   child: ListView.builder(
@@ -329,6 +443,7 @@ ${'download_app'.tr()}: CarSocial
                   ),
                 ),
             ],
+
             const SizedBox(height: 12),
             Row(
               children: [
@@ -365,8 +480,12 @@ ${'download_app'.tr()}: CarSocial
                     tooltip: 'whatsapp'.tr(),
                   ),
                 IconButton(
-                  icon: const Icon(Icons.bookmark_border),
-                  onPressed: () {},
+                  icon: Icon(
+                    _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    color: _isSaved ? Colors.amber : null,
+                  ),
+                  onPressed: _toggleSavePost,
+                  tooltip: 'save'.tr(),
                 ),
               ],
             ),
