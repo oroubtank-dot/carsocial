@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'login_screen.dart';
-import 'home_screen.dart';
+import '../constants/app_colors.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,95 +12,159 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _identifierController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
 
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  bool _isOtpSent = false;
+  String? _verificationId;
+  String _identifierType = 'email'; // 'email' or 'phone'
+  String _identifier = '';
 
-  Future<void> _register() async {
-    if (_nameController.text.isEmpty) {
-      _showSnackBar('please_enter_name'.tr());
-      return;
-    }
+  Future<void> _sendOtp() async {
+    final identifier = _identifierController.text.trim();
 
-    if (_emailController.text.isEmpty) {
-      _showSnackBar('please_enter_email_or_phone'.tr());
+    if (identifier.isEmpty) {
+      _showSnackBar('الرجاء إدخال البريد الإلكتروني أو رقم الهاتف');
       return;
     }
 
     if (_passwordController.text.isEmpty) {
-      _showSnackBar('please_enter_password'.tr());
+      _showSnackBar('الرجاء إدخال كلمة المرور');
       return;
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      _showSnackBar('passwords_dont_match'.tr());
-      return;
-    }
-
-    if (_passwordController.text.length < 6) {
-      _showSnackBar('password_too_weak'.tr());
+      _showSnackBar('كلمة المرور غير متطابقة');
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final auth = FirebaseAuth.instance;
-      final userCredential = await auth.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      if (identifier.contains('@')) {
+        // إرسال كود عبر البريد الإلكتروني
+        _identifierType = 'email';
+        _identifier = identifier;
+        await _sendEmailOtp(identifier);
+      } else {
+        // إرسال كود عبر الهاتف
+        _identifierType = 'phone';
+        _identifier = identifier;
+        await _sendPhoneOtp(identifier);
+      }
 
-      final user = userCredential.user;
-
-      await user?.updateDisplayName(_nameController.text.trim());
-
-      await FirebaseFirestore.instance.collection('users').doc(user?.uid).set({
-        'uid': user?.uid,
-        'displayName': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phoneNumber': _phoneController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-        'accountType': 'free',
-        'photoURL': '',
+      setState(() {
+        _isOtpSent = true;
+        _isLoading = false;
       });
 
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'email-already-in-use') {
-        message = 'email_already_used'.tr();
-      } else if (e.code == 'invalid-email') {
-        message = 'please_enter_valid_email'.tr();
-      } else {
-        message = 'error_occurred'.tr();
-      }
-      _showSnackBar(message);
+      _showSnackBar('تم إرسال رمز التحقق', isError: false);
     } catch (e) {
-      _showSnackBar('error_occurred'.tr());
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _showSnackBar('حدث خطأ: ${e.toString()}');
+      setState(() => _isLoading = false);
     }
   }
 
-  void _showSnackBar(String message) {
+  Future<void> _sendEmailOtp(String email) async {
+    // إنشاء مستخدم مؤقت في Firebase Auth
+    final auth = FirebaseAuth.instance;
+    await auth.createUserWithEmailAndPassword(
+      email: email,
+      password: _passwordController.text.trim(),
+    );
+
+    // إرسال إيميل تحقق
+    final user = auth.currentUser;
+    await user?.sendEmailVerification();
+
+    _verificationId = user?.uid;
+  }
+
+  Future<void> _sendPhoneOtp(String phone) async {
+    final auth = FirebaseAuth.instance;
+    await auth.verifyPhoneNumber(
+      phoneNumber: phone,
+      verificationCompleted: (credential) async {
+        await auth.signInWithCredential(credential);
+        _completeRegistration();
+      },
+      verificationFailed: (e) {
+        _showSnackBar('فشل إرسال الكود: ${e.message}');
+      },
+      codeSent: (verificationId, forceResendingToken) {
+        _verificationId = verificationId;
+      },
+      codeAutoRetrievalTimeout: (verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  }
+
+  Future<void> _verifyOtp() async {
+    final otp = _otpController.text.trim();
+    if (otp.isEmpty) {
+      _showSnackBar('الرجاء إدخال رمز التحقق');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_identifierType == 'email') {
+        // التحقق من البريد الإلكتروني
+        final user = FirebaseAuth.instance.currentUser;
+        await user?.reload();
+        if (user?.emailVerified ?? false) {
+          await _completeRegistration();
+        } else {
+          _showSnackBar('الرجاء التحقق من بريدك الإلكتروني أولاً');
+          setState(() => _isLoading = false);
+        }
+      } else {
+        // التحقق من الهاتف
+        final credential = PhoneAuthProvider.credential(
+          verificationId: _verificationId!,
+          smsCode: otp,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        await _completeRegistration();
+      }
+    } catch (e) {
+      _showSnackBar('رمز التحقق غير صحيح: ${e.toString()}');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _completeRegistration() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // حفظ بيانات المستخدم في Firestore
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'uid': user.uid,
+      'email': _identifierType == 'email' ? _identifier : '',
+      'phoneNumber': _identifierType == 'phone' ? _identifier : '',
+      'createdAt': FieldValue.serverTimestamp(),
+      'accountType': 'free',
+      'points': 0,
+      'level': 1,
+    });
+
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/edit_profile');
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
     );
   }
 
@@ -123,6 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 20),
               Text(
                 'register'.tr(),
                 style: const TextStyle(
@@ -137,137 +201,117 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 32),
-
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: 'full_name'.tr(),
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              if (!_isOtpSent) ...[
+                // حقل البريد أو الهاتف
+                TextField(
+                  controller: _identifierController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'البريد الإلكتروني أو رقم الهاتف',
+                    prefixIcon: const Icon(Icons.person),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    helperText: 'أدخل بريدك الإلكتروني أو رقم هاتفك',
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'email'.tr(),
-                  prefixIcon: const Icon(Icons.email),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                // كلمة المرور
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'password'.tr(),
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'phone_number'.tr(),
-                  prefixIcon: const Icon(Icons.phone),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                // تأكيد كلمة المرور
+                TextField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'confirm_password'.tr(),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 32),
 
-              TextField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                decoration: InputDecoration(
-                  labelText: 'password'.tr(),
-                  prefixIcon: const Icon(Icons.lock),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _sendOtp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: _confirmPasswordController,
-                obscureText: _obscureConfirmPassword,
-                decoration: InputDecoration(
-                  labelText: 'confirm_password'.tr(),
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                    onPressed: () => setState(
-                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : Text('إرسال رمز التحقق',
+                            style: const TextStyle(fontSize: 16)),
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _register,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0066CC),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'register_button'.tr(),
-                          style: const TextStyle(fontSize: 16),
-                        ),
+              ],
+              if (_isOtpSent) ...[
+                Text(
+                  'تم إرسال رمز التحقق إلى ${_identifierType == 'email' ? 'بريدك الإلكتروني' : 'هاتفك'}',
+                  style: const TextStyle(fontSize: 14),
                 ),
-              ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _otpController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'رمز التحقق',
+                    prefixIcon: const Icon(Icons.pin),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _verifyOtp,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : Text('تأكيد', style: const TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'have_account'.tr(),
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
+                  Text('لديك حساب بالفعل؟',
+                      style: TextStyle(color: Colors.grey.shade600)),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
-                      );
+                      Navigator.pushReplacementNamed(context, '/login');
                     },
-                    child: Text(
-                      'sign_in'.tr(),
-                      style: const TextStyle(color: Color(0xFF0066CC)),
-                    ),
+                    child: Text('تسجيل الدخول',
+                        style: TextStyle(color: AppColors.primary)),
                   ),
                 ],
               ),

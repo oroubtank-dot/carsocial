@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import '../constants/app_colors.dart';
 
 class CustomNavBar extends StatelessWidget {
   final int currentIndex;
@@ -14,34 +14,37 @@ class CustomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
       currentIndex: currentIndex,
       onTap: onTap,
-      type: BottomNavigationBarType.fixed,
-      items: [
+      selectedItemColor: AppColors.secondary,
+      unselectedItemColor: Colors.grey,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+      items: const [
         BottomNavigationBarItem(
-          icon: const Icon(Icons.home_outlined),
-          activeIcon: const Icon(Icons.home),
-          label: 'home'.tr(),
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home),
+          label: 'الرئيسية',
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.notifications_outlined),
-          activeIcon: const Icon(Icons.notifications),
-          label: 'notifications'.tr(),
+          icon: Icon(Icons.favorite_border),
+          activeIcon: Icon(Icons.favorite),
+          label: 'المفضلة',
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.add_box_outlined),
-          activeIcon: const Icon(Icons.add_box),
-          label: 'add'.tr(),
+          icon: Icon(Icons.add_circle_outline),
+          activeIcon: Icon(Icons.add_circle),
+          label: 'إضافة',
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.build_outlined),
-          activeIcon: const Icon(Icons.build),
-          label: 'services'.tr(),
+          icon: Icon(Icons.chat_bubble_outline),
+          activeIcon: Icon(Icons.chat_bubble),
+          label: 'المحادثات',
         ),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.person_outline),
-          activeIcon: const Icon(Icons.person),
-          label: 'profile'.tr(),
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'حسابي',
         ),
       ],
     );

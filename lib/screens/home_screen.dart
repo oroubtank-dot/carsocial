@@ -9,11 +9,11 @@ import '../widgets/story_card.dart';
 import '../widgets/custom_navbar.dart';
 import '../constants/app_colors.dart';
 import 'profile_screen.dart';
-import 'notifications_screen.dart';
 import 'add_post_screen.dart';
 import 'feed_screen.dart';
 import 'create_screen.dart';
-import 'services_screen.dart';
+import 'favorites_screen.dart';
+import 'chat_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,9 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _screens = [
       const FeedScreen(),
-      const NotificationsScreen(),
+      const FavoritesScreen(),
       const CreateScreen(),
-      const ServicesScreen(),
+      const ChatScreen(chatId: '', otherUserId: '', otherUserName: ''),
       const ProfileScreen(),
     ];
   }
@@ -46,6 +46,17 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: CustomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          if (index == 3) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content:
+                    Text('💬 اضغط على أيقونة الشات في المنشور لبدء محادثة'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
           setState(() {
             _currentIndex = index;
           });
@@ -205,6 +216,12 @@ class HomeContent extends StatelessWidget {
         title: Text('app_name'.tr()),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () {
+              Navigator.pushNamed(context, '/favorites');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {

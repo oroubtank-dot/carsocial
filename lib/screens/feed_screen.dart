@@ -123,6 +123,13 @@ class _FeedScreenState extends State<FeedScreen> {
         title: Text('app_name'.tr()),
         centerTitle: true,
         actions: [
+          // أيقونة المفضلة (جديدة)
+          IconButton(
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () {
+              Navigator.pushNamed(context, '/favorites');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () {

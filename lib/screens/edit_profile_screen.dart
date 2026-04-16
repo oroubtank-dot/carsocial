@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import '../constants/app_colors.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -18,7 +19,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _phoneController = TextEditingController();
 
   File? _imageFile;
+  File? _coverImageFile;
   String _imageUrl = '';
+  String _coverImageUrl = '';
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
 
@@ -35,6 +38,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _nameController.text = _user!.displayName ?? '';
       _phoneController.text = _user!.phoneNumber ?? '';
       _imageUrl = _user!.photoURL ?? '';
+
+      // تحميل صورة الغلاف من Firestore
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .get();
+      _coverImageUrl = doc.data()?['coverPhoto'] ?? '';
     }
   }
 
@@ -47,14 +57,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Future<String?> _uploadImage() async {
-    if (_imageFile == null) return _imageUrl;
+  Future<void> _pickCoverImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _coverImageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(File? imageFile, String type) async {
+    if (imageFile == null) return null;
 
     try {
-      final ref = FirebaseStorage.instance.ref().child(
-        'profile_images/${_user!.uid}.jpg',
-      );
-      await ref.putFile(_imageFile!);
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('profile/${_user!.uid}/$type.jpg');
+      await ref.putFile(imageFile);
       return await ref.getDownloadURL();
     } catch (e) {
       return null;
@@ -67,32 +86,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      String? photoUrl = await _uploadImage();
-
-      await _user!.updateDisplayName(_nameController.text.trim());
+      String? photoUrl = await _uploadImage(_imageFile, 'photo');
+      String? coverUrl = await _uploadImage(_coverImageFile, 'cover');
 
       if (photoUrl != null) {
         await _user!.updatePhotoURL(photoUrl);
       }
 
+      if (_nameController.text.trim().isNotEmpty) {
+        await _user!.updateDisplayName(_nameController.text.trim());
+      }
+
+      final updateData = {
+        'displayName': _nameController.text.trim(),
+        'phoneNumber': _phoneController.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (photoUrl != null) updateData['photoURL'] = photoUrl;
+      if (coverUrl != null) updateData['coverPhoto'] = coverUrl;
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_user!.uid)
-          .update({
-            'displayName': _nameController.text.trim(),
-            'phoneNumber': _phoneController.text.trim(),
-            'photoURL': photoUrl ?? _imageUrl,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+          .update(updateData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم تحديث الملف الشخصي بنجاح'),
-            backgroundColor: Colors.green,
-          ),
+              content: Text('تم تحديث الملف الشخصي بنجاح'),
+              backgroundColor: Colors.green),
         );
-        Navigator.pop(context);
+        Navigator.pushReplacementNamed(context, '/profile');
       }
     } catch (e) {
       if (mounted) {
@@ -111,8 +136,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تعديل الملف الشخصي'),
+        title: const Text('إكمال الملف الشخصي'),
         centerTitle: true,
+        backgroundColor: AppColors.primary,
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveProfile,
@@ -131,6 +157,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // صورة الغلاف
+            GestureDetector(
+              onTap: _pickCoverImage,
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                  image: _coverImageFile != null
+                      ? DecorationImage(
+                          image: FileImage(_coverImageFile!), fit: BoxFit.cover)
+                      : (_coverImageUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(_coverImageUrl),
+                              fit: BoxFit.cover)
+                          : null),
+                ),
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Text('صورة الغلاف',
+                            style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // صورة البروفايل
             Center(
               child: GestureDetector(
                 onTap: _pickImage,
@@ -142,15 +209,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       backgroundImage: _imageFile != null
                           ? FileImage(_imageFile!)
                           : (_imageUrl.isNotEmpty
-                                    ? NetworkImage(_imageUrl)
-                                    : null)
-                                as ImageProvider?,
+                              ? NetworkImage(_imageUrl)
+                              : null) as ImageProvider?,
                       child: (_imageFile == null && _imageUrl.isEmpty)
-                          ? const Icon(
-                              Icons.person,
-                              size: 60,
-                              color: Colors.grey,
-                            )
+                          ? const Icon(Icons.person,
+                              size: 60, color: Colors.grey)
                           : null,
                     ),
                     Positioned(
@@ -159,7 +222,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
-                          color: Color(0xFF0066CC),
+                          color: AppColors.primary,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -174,6 +237,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // الاسم
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -189,16 +254,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               },
             ),
             const SizedBox(height: 16),
+
+            // رقم الهاتف (اختياري)
             TextFormField(
               controller: _phoneController,
               decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
+                labelText: 'رقم الهاتف (اختياري)',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.phone),
               ),
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 24),
+
             if (_isLoading) const Center(child: CircularProgressIndicator()),
           ],
         ),

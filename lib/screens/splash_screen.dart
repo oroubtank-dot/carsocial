@@ -4,6 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import '../constants/app_colors.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -24,18 +26,33 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    final user = FirebaseAuth.instance.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
 
-    if (user != null) {
+    if (!hasSeenOnboarding) {
+      // ignore: use_build_context_synchronously
       Navigator.pushReplacement(
+        // ignore: use_build_context_synchronously
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
       );
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // ignore: use_build_context_synchronously
+        Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        // ignore: use_build_context_synchronously
+        Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
     }
   }
 

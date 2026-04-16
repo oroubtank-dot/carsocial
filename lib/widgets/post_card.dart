@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../constants/app_colors.dart';
+import '../screens/chat_screen.dart';
 
 class PostCard extends StatefulWidget {
   final DocumentSnapshot post;
@@ -65,9 +66,7 @@ class _PostCardState extends State<PostCard> {
   Future<void> _toggleSavePost() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يجب تسجيل الدخول أولاً')),
-      );
+      _showLoginRequiredMessage(context);
       return;
     }
 
@@ -101,6 +100,45 @@ class _PostCardState extends State<PostCard> {
         );
       }
     }
+  }
+
+  Future<void> _startChat(BuildContext context, String otherUserId,
+      String otherUserName, String otherUserPhoto) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      _showLoginRequiredMessage(context);
+      return;
+    }
+
+    String chatId = currentUser.uid.compareTo(otherUserId) < 0
+        ? '${currentUser.uid}_$otherUserId'
+        : '${otherUserId}_${currentUser.uid}';
+
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+      'participants': [currentUser.uid, otherUserId],
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (mounted) {
+      Navigator.push(
+        // ignore: use_build_context_synchronously
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId,
+            otherUserId: otherUserId,
+            otherUserName: otherUserName,
+            otherUserPhoto: otherUserPhoto,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showLoginRequiredMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('يجب تسجيل الدخول أولاً')),
+    );
   }
 
   @override
@@ -469,6 +507,19 @@ ${'download_app'.tr()}: CarSocial
                   icon: const Icon(Icons.share_outlined),
                   onPressed: () => _sharePost(data),
                   tooltip: 'share'.tr(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline,
+                      color: AppColors.primary),
+                  onPressed: () {
+                    _startChat(
+                      context,
+                      data['userId'],
+                      data['userName'] ?? 'مستخدم',
+                      data['userPhoto'] ?? '',
+                    );
+                  },
+                  tooltip: 'chat'.tr(),
                 ),
                 const Spacer(),
                 if (data['phone'] != null &&
