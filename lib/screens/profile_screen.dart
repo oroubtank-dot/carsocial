@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import '../services/points_service.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -27,11 +28,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _photoURL = '';
   String _phoneNumber = '';
   DateTime? _creationTime;
+  int _points = 0;
+  int _level = 1;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadPoints();
   }
 
   Future<void> _loadUserData() async {
@@ -46,6 +50,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _loadPoints() async {
+    final pointsData = await PointsService.getUserPoints();
+    if (mounted) {
+      setState(() {
+        _points = pointsData['points'];
+        _level = pointsData['level'];
+      });
+    }
+  }
+
   Future<void> _pickAndUploadImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -55,9 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       try {
-        final ref = FirebaseStorage.instance.ref().child(
-          'profile_images/${_user!.uid}.jpg',
-        );
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('profile_images/${_user!.uid}.jpg');
         await ref.putFile(_imageFile!);
         final downloadUrl = await ref.getDownloadURL();
 
@@ -74,9 +88,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم تحديث الصورة بنجاح'),
-              backgroundColor: Colors.green,
-            ),
+                content: Text('تم تحديث الصورة بنجاح'),
+                backgroundColor: Colors.green),
           );
         }
       } catch (e) {
@@ -108,9 +121,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في تسجيل الخروج: $e'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('خطأ في تسجيل الخروج: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -138,12 +150,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadUserData,
+              onRefresh: () async {
+                await _loadUserData();
+                await _loadPoints();
+              },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
+
+                    // الصورة الشخصية
                     Center(
                       child: Stack(
                         children: [
@@ -153,15 +170,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             backgroundImage: _imageFile != null
                                 ? FileImage(_imageFile!)
                                 : (_photoURL.isNotEmpty
-                                          ? NetworkImage(_photoURL)
-                                          : null)
-                                      as ImageProvider?,
+                                    ? NetworkImage(_photoURL)
+                                    : null) as ImageProvider?,
                             child: (_imageFile == null && _photoURL.isEmpty)
-                                ? Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: Colors.grey.shade400,
-                                  )
+                                ? Icon(Icons.person,
+                                    size: 60, color: Colors.grey.shade400)
                                 : null,
                           ),
                           if (!_isUploading)
@@ -200,6 +213,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
+
+                    // الاسم
                     Text(
                       _displayName.isEmpty ? 'user'.tr() : _displayName,
                       style: const TextStyle(
@@ -208,6 +223,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
+
+                    // الإيميل
                     Text(
                       _email,
                       style: TextStyle(
@@ -226,37 +243,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
+
+                    // ========== بطاقة النقاط والمستوى (الجديد) ==========
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            PointsService.getLevelColor(_level),
+                            PointsService.getLevelColor(_level)
+                                .withValues(alpha: 0.7),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: PointsService.getLevelColor(_level)
+                                .withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // مستوى المستخدم
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 5,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$_level',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: PointsService.getLevelColor(_level),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  PointsService.getLevelBadge(_level),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$_points نقطة',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // شريط التقدم للمستوى التالي
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: LinearProgressIndicator(
+                                    value: (_points % 100) / 100,
+                                    backgroundColor: Colors.white30,
+                                    valueColor: const AlwaysStoppedAnimation(
+                                        Colors.white),
+                                    minHeight: 8,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_points % 100}/100 نقطة للمستوى التالي',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // بطاقة معلومات الحساب
                     Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(
-                              Icons.email,
-                              color: Color(0xFF0066CC),
-                            ),
+                            leading: const Icon(Icons.email,
+                                color: Color(0xFF0066CC)),
                             title: Text('email'.tr()),
                             subtitle: Text(_email),
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(
-                              Icons.calendar_today,
-                              color: Color(0xFF0066CC),
-                            ),
+                            leading: const Icon(Icons.calendar_today,
+                                color: Color(0xFF0066CC)),
                             title: Text('join_date'.tr()),
-                            subtitle: Text(
-                              _creationTime != null
-                                  ? '${_creationTime!.day}/${_creationTime!.month}/${_creationTime!.year}'
-                                  : '',
-                            ),
+                            subtitle: Text(_creationTime != null
+                                ? '${_creationTime!.day}/${_creationTime!.month}/${_creationTime!.year}'
+                                : ''),
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(
-                              Icons.card_membership,
-                              color: Color(0xFF0066CC),
-                            ),
+                            leading: const Icon(Icons.card_membership,
+                                color: Color(0xFF0066CC)),
                             title: Text('account_type'.tr()),
                             subtitle: Text('free'.tr()),
                           ),
@@ -264,6 +375,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
+
+                    // زر تسجيل الخروج
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: SizedBox(
@@ -271,10 +384,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _signOut,
                           icon: const Icon(Icons.logout, color: Colors.red),
-                          label: Text(
-                            'logout'.tr(),
-                            style: const TextStyle(color: Colors.red),
-                          ),
+                          label: Text('logout'.tr(),
+                              style: const TextStyle(color: Colors.red)),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Colors.red),
                             padding: const EdgeInsets.symmetric(vertical: 12),

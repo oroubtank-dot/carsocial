@@ -12,6 +12,8 @@ import 'comments_screen.dart';
 import 'create_screen.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
+import '../services/cache_service.dart';
+import '../services/points_service.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -201,7 +203,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 85,
@@ -300,7 +301,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _storiesStream,
@@ -331,13 +331,11 @@ class _FeedScreenState extends State<FeedScreen> {
                 },
               ),
             ),
-
             SliverToBoxAdapter(
               child: Card(
                 margin: const EdgeInsets.all(12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF0A2E5C),
@@ -346,10 +344,8 @@ class _FeedScreenState extends State<FeedScreen> {
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  title: Text(
-                    'what_to_post'.tr(),
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  title: Text('what_to_post'.tr(),
+                      style: const TextStyle(color: Colors.grey)),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -359,7 +355,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
             StreamBuilder<QuerySnapshot>(
               stream: _postsStream,
               builder: (context, snapshot) {
@@ -377,6 +372,19 @@ class _FeedScreenState extends State<FeedScreen> {
 
                 final posts = snapshot.data?.docs ?? [];
 
+                // حفظ المنشورات في الكاش
+                if (posts.isNotEmpty) {
+                  final postsData = posts.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return {
+                      'id': doc.id,
+                      'data': data,
+                    };
+                  }).toList();
+                  CacheService.cachePosts(
+                      postsData.cast<Map<String, dynamic>>());
+                }
+
                 if (posts.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
@@ -385,9 +393,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         child: Text(
                           'no_posts'.tr(),
                           style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                          ),
+                              fontSize: 16, color: Colors.grey.shade600),
                         ),
                       ),
                     ),
@@ -476,16 +482,13 @@ class _FeedScreenState extends State<FeedScreen> {
               child: CircleAvatar(
                 radius: 30,
                 backgroundColor: Colors.white,
-                backgroundImage: photoUrl.isNotEmpty
-                    ? NetworkImage(photoUrl)
-                    : null,
+                backgroundImage:
+                    photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
                 child: photoUrl.isEmpty
                     ? Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'U',
                         style: const TextStyle(
-                          fontSize: 20,
-                          color: Colors.black54,
-                        ),
+                            fontSize: 20, color: Colors.black54),
                       )
                     : null,
               ),
@@ -516,10 +519,8 @@ class _FeedScreenState extends State<FeedScreen> {
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return const Center(
-                      child: Text(
-                        'تعذر تحميل القصة',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      child: Text('تعذر تحميل القصة',
+                          style: TextStyle(color: Colors.white)),
                     );
                   },
                 ),
@@ -540,10 +541,7 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Widget _buildPostCard(
-    Map<String, dynamic> data,
-    String postId,
-    BuildContext context,
-  ) {
+      Map<String, dynamic> data, String postId, BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isLiked =
         (data['likes'] as List?)?.contains(currentUser?.uid) ?? false;
@@ -562,8 +560,8 @@ class _FeedScreenState extends State<FeedScreen> {
                   backgroundColor: const Color(0xFF0A2E5C),
                   backgroundImage:
                       data['userPhoto'] != null && data['userPhoto'].isNotEmpty
-                      ? NetworkImage(data['userPhoto'])
-                      : null,
+                          ? NetworkImage(data['userPhoto'])
+                          : null,
                   child: data['userPhoto'] == null || data['userPhoto'].isEmpty
                       ? Text(
                           data['userName']?.substring(0, 1).toUpperCase() ??
@@ -580,16 +578,12 @@ class _FeedScreenState extends State<FeedScreen> {
                       Text(
                         data['userName'] ?? 'مستخدم',
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
                         data['service'] ?? '',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
                   ),
@@ -618,10 +612,9 @@ class _FeedScreenState extends State<FeedScreen> {
               Text(
                 'السعر: ${data['price']} ج.م',
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0A2E5C),
-                ),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0A2E5C)),
               ),
             ],
             if (data['mediaUrls'] != null &&
@@ -645,11 +638,8 @@ class _FeedScreenState extends State<FeedScreen> {
                             return Container(
                               width: 200,
                               color: Colors.grey.shade200,
-                              child: const Icon(
-                                Icons.broken_image,
-                                color: Colors.grey,
-                                size: 50,
-                              ),
+                              child: const Icon(Icons.broken_image,
+                                  color: Colors.grey, size: 50),
                             );
                           },
                         ),
@@ -663,10 +653,8 @@ class _FeedScreenState extends State<FeedScreen> {
             Row(
               children: [
                 IconButton(
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? Colors.red : null,
-                  ),
+                  icon: Icon(isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : null),
                   onPressed: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
@@ -692,6 +680,8 @@ class _FeedScreenState extends State<FeedScreen> {
                           title: 'إعجاب جديد',
                           body: '${user.displayName ?? 'مستخدم'} أعجب بمنشورك',
                         );
+                        await PointsService.addPoints(
+                            data['userId'], 1, 'تم الإعجاب بمنشورك');
                       }
                     }
 
@@ -711,8 +701,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CommentsScreen(postId: postId),
-                      ),
+                          builder: (_) => CommentsScreen(postId: postId)),
                     );
                   },
                 ),
@@ -756,9 +745,8 @@ class _FeedScreenState extends State<FeedScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم إزالة من المحفوظات'),
-              duration: Duration(seconds: 1),
-            ),
+                content: Text('تم إزالة من المحفوظات'),
+                duration: Duration(seconds: 1)),
           );
         }
       } else {
@@ -769,9 +757,7 @@ class _FeedScreenState extends State<FeedScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم الحفظ'),
-              duration: Duration(seconds: 1),
-            ),
+                content: Text('تم الحفظ'), duration: Duration(seconds: 1)),
           );
         }
       }
@@ -797,7 +783,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 title: const Text('تعديل المنشور'),
                 onTap: () {
                   Navigator.pop(context);
-                  // فتح شاشة التعديل - سيتم إضافته لاحقاً
                 },
               ),
               ListTile(
@@ -851,9 +836,8 @@ class _FeedScreenState extends State<FeedScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم حذف المنشور بنجاح'),
-              backgroundColor: Colors.green,
-            ),
+                content: Text('تم حذف المنشور بنجاح'),
+                backgroundColor: Colors.green),
           );
         }
       } catch (e) {
@@ -880,13 +864,11 @@ class _FeedScreenState extends State<FeedScreen> {
               'محتوى غير لائق',
               'عنف أو كراهية',
               'انتحال شخصية',
-              'مخالف للقوانين',
-            ].map(
-              (r) => ListTile(
-                title: Text(r),
-                onTap: () => Navigator.pop(context, r),
-              ),
-            ),
+              'مخالف للقوانين'
+            ].map((r) => ListTile(
+                  title: Text(r),
+                  onTap: () => Navigator.pop(context, r),
+                )),
           ],
         ),
       ),
@@ -903,9 +885,8 @@ class _FeedScreenState extends State<FeedScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم الإبلاغ عن المنشور، شكراً لك'),
-              backgroundColor: Colors.green,
-            ),
+                content: Text('تم الإبلاغ عن المنشور، شكراً لك'),
+                backgroundColor: Colors.green),
           );
         }
       } catch (e) {
@@ -943,29 +924,22 @@ class _FeedScreenState extends State<FeedScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'share'.tr(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('share'.tr(),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    shape: BoxShape.circle,
-                  ),
+                      color: Colors.green.shade100, shape: BoxShape.circle),
                   child: const Icon(Icons.share, color: Colors.green),
                 ),
                 title: Text('share_external'.tr()),
@@ -978,9 +952,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    shape: BoxShape.circle,
-                  ),
+                      color: Colors.grey.shade200, shape: BoxShape.circle),
                   child: const Icon(Icons.link, color: Colors.grey),
                 ),
                 title: Text('copy_link'.tr()),
@@ -1001,8 +973,7 @@ class _FeedScreenState extends State<FeedScreen> {
     final description = postData['description'] ?? '';
     final price = postData['price'] ?? '';
 
-    final text =
-        '''
+    final text = '''
 🚗 *$title*
 📝 $description
 ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
@@ -1014,13 +985,10 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
 
   void _copyLink(BuildContext context) {
     Clipboard.setData(
-      const ClipboardData(text: 'https://carsocial.app/post/123'),
-    );
+        const ClipboardData(text: 'https://carsocial.app/post/123'));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('link_copied'.tr()),
-        backgroundColor: Colors.green,
-      ),
+          content: Text('link_copied'.tr()), backgroundColor: Colors.green),
     );
   }
 
@@ -1041,9 +1009,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
             title: Text('choose_images'.tr()),
             onTap: () async {
               Navigator.pop(context);
-              final image = await _storyPicker.pickImage(
-                source: ImageSource.gallery,
-              );
+              final image =
+                  await _storyPicker.pickImage(source: ImageSource.gallery);
               if (image != null && mounted) {
                 await _uploadStory(File(image.path), 'image');
               }
@@ -1054,9 +1021,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
             title: Text('choose_video'.tr()),
             onTap: () async {
               Navigator.pop(context);
-              final video = await _storyPicker.pickVideo(
-                source: ImageSource.gallery,
-              );
+              final video =
+                  await _storyPicker.pickVideo(source: ImageSource.gallery);
               if (video != null && mounted) {
                 await _uploadStory(File(video.path), 'video');
               }
@@ -1081,8 +1047,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
 
     try {
       final ref = FirebaseStorage.instance.ref().child(
-        'stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.${type == 'image' ? 'jpg' : 'mp4'}',
-      );
+            'stories/${user.uid}/${DateTime.now().millisecondsSinceEpoch}.${type == 'image' ? 'jpg' : 'mp4'}',
+          );
 
       await ref.putFile(file);
       final url = await ref.getDownloadURL();
@@ -1094,18 +1060,15 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
         'mediaUrl': url,
         'mediaType': type,
         'createdAt': FieldValue.serverTimestamp(),
-        'expiresAt': Timestamp.fromDate(
-          DateTime.now().add(const Duration(hours: 24)),
-        ),
+        'expiresAt':
+            Timestamp.fromDate(DateTime.now().add(const Duration(hours: 24))),
       });
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('story_added'.tr()),
-            backgroundColor: Colors.green,
-          ),
+              content: Text('story_added'.tr()), backgroundColor: Colors.green),
         );
       }
     } on FirebaseException catch (e) {
@@ -1134,9 +1097,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${'story_failed'.tr()}: $e'),
-            backgroundColor: Colors.red,
-          ),
+              content: Text('${'story_failed'.tr()}: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -1145,9 +1107,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
   void _showFilterMessage(BuildContext context, String filterName) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${'selected'.tr()}: $filterName'),
-        duration: const Duration(seconds: 1),
-      ),
+          content: Text('${'selected'.tr()}: $filterName'),
+          duration: const Duration(seconds: 1)),
     );
   }
 
@@ -1155,61 +1116,38 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'more_services'.tr(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('more_services'.tr(),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
                 children: [
                   _buildServiceItem(
-                    Icons.brush,
-                    'accessories'.tr(),
-                    Colors.purple,
-                  ),
+                      Icons.brush, 'accessories'.tr(), Colors.purple),
                   _buildServiceItem(Icons.air, 'exhaust'.tr(), Colors.brown),
                   _buildServiceItem(
-                    Icons.settings,
-                    'tuning'.tr(),
-                    Colors.orange,
-                  ),
+                      Icons.settings, 'tuning'.tr(), Colors.orange),
                   _buildServiceItem(Icons.ac_unit, 'ac'.tr(), Colors.cyan),
                   _buildServiceItem(Icons.shield, 'coating'.tr(), Colors.green),
                   _buildServiceItem(
-                    Icons.description,
-                    'license'.tr(),
-                    Colors.indigo,
-                  ),
+                      Icons.description, 'license'.tr(), Colors.indigo),
                   _buildServiceItem(
-                    Icons.local_shipping,
-                    'transport'.tr(),
-                    Colors.blueGrey,
-                  ),
+                      Icons.local_shipping, 'transport'.tr(), Colors.blueGrey),
                   _buildServiceItem(Icons.school, 'driving'.tr(), Colors.teal),
                   _buildServiceItem(Icons.store, 'dealership'.tr(), Colors.red),
                   _buildServiceItem(
-                    Icons.money,
-                    'finance'.tr(),
-                    const Color(0xFF2E7D32),
-                  ),
-                  _buildServiceItem(
-                    Icons.security,
-                    'insurance'.tr(),
-                    const Color(0xFF1565C0),
-                  ),
+                      Icons.money, 'finance'.tr(), const Color(0xFF2E7D32)),
+                  _buildServiceItem(Icons.security, 'insurance'.tr(),
+                      const Color(0xFF1565C0)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1235,10 +1173,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colorWithAlpha,
-              shape: BoxShape.circle,
-            ),
+            decoration:
+                BoxDecoration(color: colorWithAlpha, shape: BoxShape.circle),
             child: Icon(icon, size: 28, color: color),
           ),
           const SizedBox(height: 4),

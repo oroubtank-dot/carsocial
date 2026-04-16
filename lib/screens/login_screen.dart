@@ -65,9 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       _showSnackBar('unexpected_error'.tr());
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      setState(() => _isLoading = false);
     }
   }
 
@@ -137,19 +135,17 @@ class _LoginScreenState extends State<LoginScreen> {
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.black87,
           side: const BorderSide(color: Colors.grey),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: iconColor, size: 24),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -175,24 +171,18 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             Icon(Icons.directions_car, color: Color(0xFF0066CC), size: 28),
             SizedBox(width: 8),
-            Text(
-              'CarSocial',
-              style: TextStyle(
-                color: Color(0xFF0066CC),
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text('CarSocial',
+                style: TextStyle(
+                    color: Color(0xFF0066CC),
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
         centerTitle: true,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(
-              Icons.language,
-              color: Color(0xFF0066CC),
-              size: 28,
-            ),
+            icon:
+                const Icon(Icons.language, color: Color(0xFF0066CC), size: 28),
             onSelected: (String language) {
               context.setLocale(Locale(language));
             },
@@ -229,23 +219,17 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 20),
-
                 Text(
                   _isPasswordStep ? 'enter_password'.tr() : 'login_signup'.tr(),
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
                 ),
-
                 const SizedBox(height: 30),
-
                 if (!_isPasswordStep) ...[
-                  Text(
-                    'email_or_phone'.tr(),
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
+                  Text('email_or_phone'.tr(),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _emailController,
@@ -254,31 +238,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'enter_email_or_phone'.tr(),
                       hintStyle: const TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.grey)),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.grey)),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF0066CC),
-                          width: 2,
-                        ),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: Color(0xFF0066CC), width: 2)),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                     ),
                   ),
                 ],
-
                 if (_isPasswordStep) ...[
-                  Text(
-                    'password'.tr(),
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
+                  Text('password'.tr(),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _passwordController,
@@ -287,20 +263,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'enter_password_hint'.tr(),
                       hintStyle: const TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.grey)),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.grey)),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF0066CC),
-                          width: 2,
-                        ),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: Color(0xFF0066CC), width: 2)),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                     ),
@@ -310,19 +281,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: _resetPassword,
-                      child: Text(
-                        'forgot_password'.tr(),
-                        style: const TextStyle(
-                          color: Color(0xFF0066CC),
-                          fontSize: 14,
-                        ),
-                      ),
+                      child: Text('forgot_password'.tr(),
+                          style: const TextStyle(
+                              color: Color(0xFF0066CC), fontSize: 14)),
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 30),
-
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -334,8 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       backgroundColor: const Color(0xFF0066CC),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: _isLoading
@@ -343,20 +307,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
+                                color: Colors.white, strokeWidth: 2))
                         : Text(
                             _isPasswordStep ? 'sign_in'.tr() : 'next'.tr(),
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
-
                 if (!_isPasswordStep) ...[
                   const SizedBox(height: 30),
                   Row(
@@ -364,10 +322,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Expanded(child: Divider(color: Colors.grey.shade300)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'or'.tr(),
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
+                        child: Text('or'.tr(),
+                            style: TextStyle(color: Colors.grey.shade600)),
                       ),
                       Expanded(child: Divider(color: Colors.grey.shade300)),
                     ],
@@ -394,8 +350,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     iconColor: Colors.black,
                   ),
                   const SizedBox(height: 24),
-
-                  // بصمة الإصبع
                   FutureBuilder<bool>(
                     future: BiometricService.canCheckBiometrics(),
                     builder: (context, snapshot) {
@@ -408,25 +362,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 50,
                         child: OutlinedButton.icon(
                           onPressed: _handleBiometricLogin,
-                          icon: const Icon(
-                            Icons.fingerprint,
-                            color: Color(0xFF0066CC),
-                          ),
+                          icon: const Icon(Icons.fingerprint,
+                              color: Color(0xFF0066CC)),
                           label: Text('login_with_biometric'.tr()),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF0066CC),
                             side: const BorderSide(color: Color(0xFF0066CC)),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       );
                     },
                   ),
                   const SizedBox(height: 12),
-
-                  // الدخول كزائر
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -436,57 +385,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.grey.shade700,
                         side: BorderSide(color: Colors.grey.shade400),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text(
-                        'continue_as_guest'.tr(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
+                      child: Text('continue_as_guest'.tr(),
+                          style: const TextStyle(fontSize: 16)),
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // إنشاء حساب جديد
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: OutlinedButton(
                       onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
-                        ),
-                      ),
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterScreen())),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF0066CC),
                         side: const BorderSide(color: Color(0xFF0066CC)),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text(
-                        'create_account'.tr(),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('create_account'.tr(),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 20),
-
                 if (!_isPasswordStep)
                   Center(
                     child: Text(
                       'terms_agreement'.tr(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                   ),
               ],

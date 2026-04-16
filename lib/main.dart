@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'services/auth_service.dart';
+import 'services/cache_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
@@ -36,6 +37,8 @@ void main() async {
     ),
   );
 
+  await CacheService.init();
+
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('ar'), Locale('en')],
@@ -53,7 +56,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthService())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+      ],
       child: MaterialApp(
         title: 'CarSocial',
         debugShowCheckedModeBanner: false,
@@ -103,17 +108,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _selectedLanguage = context.locale.languageCode;
-    _currentLanguage = context.locale.languageCode == 'ar'
-        ? 'العربية'
-        : 'English';
+    _currentLanguage =
+        context.locale.languageCode == 'ar' ? 'العربية' : 'English';
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _currentLanguage = context.locale.languageCode == 'ar'
-        ? 'العربية'
-        : 'English';
+    _currentLanguage =
+        context.locale.languageCode == 'ar' ? 'العربية' : 'English';
     _selectedLanguage = context.locale.languageCode;
   }
 
@@ -254,10 +257,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: Text(
-              'logout'.tr(),
-              style: const TextStyle(color: Colors.red),
-            ),
+            title:
+                Text('logout'.tr(), style: const TextStyle(color: Colors.red)),
             onTap: _logout,
           ),
           const SizedBox(height: 16),
@@ -267,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// LoginScreen placeholder (should be in separate file)
+// LoginScreen placeholder
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 

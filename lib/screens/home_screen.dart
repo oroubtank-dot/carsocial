@@ -91,11 +91,7 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildServiceItem(
-    BuildContext context,
-    IconData icon,
-    String label,
-    Color color,
-  ) {
+      BuildContext context, IconData icon, String label, Color color) {
     final Color colorWithAlpha = color.withValues(alpha: 0.1);
 
     return GestureDetector(
@@ -155,10 +151,8 @@ class HomeContent extends StatelessWidget {
             children: [
               Text(
                 'more_services'.tr(),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -166,71 +160,27 @@ class HomeContent extends StatelessWidget {
                 runSpacing: 16,
                 children: [
                   _buildServiceItem(
-                    context,
-                    Icons.brush,
-                    'accessories'.tr(),
-                    Colors.purple,
-                  ),
+                      context, Icons.brush, 'accessories'.tr(), Colors.purple),
                   _buildServiceItem(
-                    context,
-                    Icons.air,
-                    'exhaust'.tr(),
-                    Colors.brown,
-                  ),
+                      context, Icons.air, 'exhaust'.tr(), Colors.brown),
                   _buildServiceItem(
-                    context,
-                    Icons.settings,
-                    'tuning'.tr(),
-                    Colors.orange,
-                  ),
+                      context, Icons.settings, 'tuning'.tr(), Colors.orange),
                   _buildServiceItem(
-                    context,
-                    Icons.ac_unit,
-                    'ac'.tr(),
-                    Colors.cyan,
-                  ),
+                      context, Icons.ac_unit, 'ac'.tr(), Colors.cyan),
                   _buildServiceItem(
-                    context,
-                    Icons.shield,
-                    'coating'.tr(),
-                    Colors.green,
-                  ),
+                      context, Icons.shield, 'coating'.tr(), Colors.green),
+                  _buildServiceItem(context, Icons.description, 'license'.tr(),
+                      Colors.indigo),
+                  _buildServiceItem(context, Icons.local_shipping,
+                      'transport'.tr(), Colors.blueGrey),
                   _buildServiceItem(
-                    context,
-                    Icons.description,
-                    'license'.tr(),
-                    Colors.indigo,
-                  ),
+                      context, Icons.school, 'driving'.tr(), Colors.teal),
                   _buildServiceItem(
-                    context,
-                    Icons.local_shipping,
-                    'transport'.tr(),
-                    Colors.blueGrey,
-                  ),
-                  _buildServiceItem(
-                    context,
-                    Icons.school,
-                    'driving'.tr(),
-                    Colors.teal,
-                  ),
-                  _buildServiceItem(
-                    context,
-                    Icons.store,
-                    'dealership'.tr(),
-                    Colors.red,
-                  ),
-                  _buildServiceItem(
-                    context,
-                    Icons.money,
-                    'finance'.tr(),
-                    Colors.green.shade700,
-                  ),
-                  _buildServiceItem(
-                    context,
-                    Icons.security,
-                    'insurance'.tr(),
-                    Colors.blue.shade700,
-                  ),
+                      context, Icons.store, 'dealership'.tr(), Colors.red),
+                  _buildServiceItem(context, Icons.money, 'finance'.tr(),
+                      Colors.green.shade700),
+                  _buildServiceItem(context, Icons.security, 'insurance'.tr(),
+                      Colors.blue.shade700),
                 ],
               ),
               const SizedBox(height: 20),
@@ -277,14 +227,12 @@ class HomeContent extends StatelessWidget {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: isDark
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade100,
+                    fillColor:
+                        isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                   ),
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 80,
@@ -299,83 +247,55 @@ class HomeContent extends StatelessWidget {
                     GestureDetector(
                       onTap: () => _showFilterMessage(context, 'cars'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.directions_car,
-                        'cars'.tr(),
-                      ),
+                          context, Icons.directions_car, 'cars'.tr()),
                     ),
                     GestureDetector(
                       onTap: () =>
                           _showFilterMessage(context, 'workshops'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.build,
-                        'workshops'.tr(),
-                      ),
+                          context, Icons.build, 'workshops'.tr()),
                     ),
                     GestureDetector(
                       onTap: () =>
                           _showFilterMessage(context, 'inspection'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.search,
-                        'inspection'.tr(),
-                      ),
+                          context, Icons.search, 'inspection'.tr()),
                     ),
                     GestureDetector(
                       onTap: () => _showFilterMessage(context, 'films'.tr()),
-                      child: _buildFilterIcon(
-                        context,
-                        Icons.movie,
-                        'films'.tr(),
-                      ),
+                      child:
+                          _buildFilterIcon(context, Icons.movie, 'films'.tr()),
                     ),
                     GestureDetector(
                       onTap: () => _showFilterMessage(context, 'painting'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.brush,
-                        'painting'.tr(),
-                      ),
+                          context, Icons.brush, 'painting'.tr()),
                     ),
                     GestureDetector(
                       onTap: () => _showFilterMessage(context, 'electric'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.electrical_services,
-                        'electric'.tr(),
-                      ),
+                          context, Icons.electrical_services, 'electric'.tr()),
                     ),
                     GestureDetector(
                       onTap: () => _showFilterMessage(context, 'tires'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.tire_repair,
-                        'tires'.tr(),
-                      ),
+                          context, Icons.tire_repair, 'tires'.tr()),
                     ),
                     GestureDetector(
                       onTap: () =>
                           _showFilterMessage(context, 'spare_parts'.tr()),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.handyman,
-                        'spare_parts'.tr(),
-                      ),
+                          context, Icons.handyman, 'spare_parts'.tr()),
                     ),
                     GestureDetector(
                       onTap: () => _showMoreServices(context),
                       child: _buildFilterIcon(
-                        context,
-                        Icons.more_horiz,
-                        'more'.tr(),
-                      ),
+                          context, Icons.more_horiz, 'more'.tr()),
                     ),
                   ],
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 110,
@@ -412,7 +332,6 @@ class HomeContent extends StatelessWidget {
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: Card(
                 margin: const EdgeInsets.all(12),
@@ -426,8 +345,7 @@ class HomeContent extends StatelessWidget {
                   title: Text(
                     'what_to_post'.tr(),
                     style: TextStyle(
-                      color: isDark ? Colors.grey.shade400 : Colors.grey,
-                    ),
+                        color: isDark ? Colors.grey.shade400 : Colors.grey),
                   ),
                   onTap: isGuest
                       ? () {
@@ -436,15 +354,13 @@ class HomeContent extends StatelessWidget {
                           );
                         }
                       : () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AddPostScreen(),
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AddPostScreen()),
                           ),
-                        ),
                 ),
               ),
             ),
-
             StreamBuilder<QuerySnapshot>(
               stream: FirestoreService().getPosts(),
               builder: (context, snapshot) {
