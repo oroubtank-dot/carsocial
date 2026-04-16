@@ -1,13 +1,80 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class AppTheme {
   static ThemeData lightTheme = ThemeData(
+    useMaterial3: true,
     brightness: Brightness.light,
-    primarySwatch: Colors.blue,
-    scaffoldBackgroundColor: Colors.white,
+    primaryColor: AppColors.primary,
+    scaffoldBackgroundColor: AppColors.background,
+    colorScheme: const ColorScheme.light(
+      primary: AppColors.primary,
+      secondary: AppColors.secondary,
+      surface: Colors.white,
+    ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF0066CC),
+      backgroundColor: AppColors.primary,
       foregroundColor: Colors.white,
+      centerTitle: true,
+      elevation: 0,
+    ),
+    cardTheme: const CardThemeData(
+      color: Colors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12))),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.secondary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: const BorderSide(color: AppColors.primary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+  );
+
+  static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    primaryColor: AppColors.darkBlue,
+    scaffoldBackgroundColor: AppColors.darkBackground,
+    colorScheme: const ColorScheme.dark(
+      primary: AppColors.darkBlue,
+      secondary: AppColors.secondary,
+      surface: AppColors.darkSurface,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.darkSurface,
+      foregroundColor: Colors.white,
+      centerTitle: true,
+      elevation: 0,
+    ),
+    cardTheme: const CardThemeData(
+      color: AppColors.darkSurface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12))),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.secondary,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.secondary,
+        side: const BorderSide(color: AppColors.secondary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     ),
   );
 }

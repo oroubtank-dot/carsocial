@@ -7,6 +7,7 @@ import '../services/firestore_service.dart';
 import '../widgets/post_card.dart';
 import '../widgets/story_card.dart';
 import '../widgets/custom_navbar.dart';
+import '../constants/app_colors.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
 import 'add_post_screen.dart';
@@ -74,7 +75,7 @@ class HomeContent extends StatelessWidget {
             child: Icon(
               icon,
               size: 28,
-              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              color: isDark ? Colors.grey.shade300 : AppColors.primary,
             ),
           ),
           const SizedBox(height: 4),
@@ -200,6 +201,7 @@ class HomeContent extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.primary,
         title: Text('app_name'.tr()),
         centerTitle: true,
         actions: [

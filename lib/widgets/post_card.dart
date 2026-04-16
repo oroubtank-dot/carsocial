@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
+import '../constants/app_colors.dart';
 
 class PostCard extends StatefulWidget {
   final DocumentSnapshot post;
@@ -64,9 +65,9 @@ class _PostCardState extends State<PostCard> {
   Future<void> _toggleSavePost() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('يجب تسجيل الدخول أولاً')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يجب تسجيل الدخول أولاً')),
+      );
       return;
     }
 
@@ -95,9 +96,9 @@ class _PostCardState extends State<PostCard> {
         _isSaved = true;
       });
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('✅ تم الحفظ في المفضلة')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ تم الحفظ في المفضلة')),
+        );
       }
     }
   }
@@ -128,8 +129,7 @@ class _PostCardState extends State<PostCard> {
     final description = data['description'] ?? '';
     final price = data['price'] ?? '';
 
-    final text =
-        '''
+    final text = '''
 🚗 *$title*
 📝 $description
 💰 ${'price'.tr()}: $price ${'egp'.tr()}
@@ -377,10 +377,10 @@ ${'download_app'.tr()}: CarSocial
               const SizedBox(height: 8),
               Text(
                 '${'price'.tr()}: ${data['price']} ${'egp'.tr()}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0066CC),
+                  color: AppColors.primary,
                 ),
               ),
             ],
