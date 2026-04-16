@@ -1,0 +1,17 @@
+.gradle/
+build/
+.android/
+.ios/
+.dart_tool/
+flutter_*.png
+*.iml
+*.lock
+*.log
+*.swp
+.DS_Store
+android/local.properties
+ios/Pods/
+ios/Flutter/Flutter.podspec
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/ephemeral/
+.DS_Store

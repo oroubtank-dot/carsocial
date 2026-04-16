@@ -1,0 +1,40 @@
+name: carsocial_app
+description: CarSocial - منصة السيارات المتكاملة
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  firebase_core: ^4.6.0
+  firebase_auth: ^6.3.0
+  cloud_firestore: ^6.2.0
+  firebase_storage: ^13.2.0
+  google_sign_in: ^7.2.0
+  image_picker: ^1.2.1
+  provider: ^6.1.5+1
+  intl: ^0.20.2
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.5.5
+  timeago: ^3.6.1
+  local_auth: ^2.2.0
+  video_player: ^2.9.5
+  easy_localization: ^3.0.7
+  share_plus: ^10.0.2
+  url_launcher: ^6.3.0
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/translations/
