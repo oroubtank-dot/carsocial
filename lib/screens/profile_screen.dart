@@ -135,14 +135,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('profile'.tr()),
         centerTitle: true,
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: Icon(Icons.edit,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               Navigator.pushNamed(context, '/edit_profile');
             },
@@ -187,13 +191,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 onTap: _pickAndUploadImage,
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.camera_alt,
-                                    color: Colors.white,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
                                     size: 20,
                                   ),
                                 ),
@@ -219,9 +224,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // الاسم
                     Text(
                       _displayName.isEmpty ? 'user'.tr() : _displayName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -231,7 +237,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _email,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                     if (_phoneNumber.isNotEmpty) ...[
@@ -240,7 +248,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _phoneNumber,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -353,18 +363,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shadowColor: Colors.black.withValues(alpha: 0.1),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
+                      color: isDark ? AppColors.darkSurface : Colors.white,
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.email,
-                                color: AppColors.primary),
+                            leading: Icon(Icons.email,
+                                color: Theme.of(context).primaryColor),
                             title: Text('email'.tr()),
                             subtitle: Text(_email),
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.calendar_today,
-                                color: AppColors.primary),
+                            leading: Icon(Icons.calendar_today,
+                                color: Theme.of(context).primaryColor),
                             title: Text('join_date'.tr()),
                             subtitle: Text(_creationTime != null
                                 ? '${_creationTime!.day}/${_creationTime!.month}/${_creationTime!.year}'
@@ -372,8 +383,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const Divider(height: 1),
                           ListTile(
-                            leading: const Icon(Icons.card_membership,
-                                color: AppColors.primary),
+                            leading: Icon(Icons.card_membership,
+                                color: Theme.of(context).primaryColor),
                             title: Text('account_type'.tr()),
                             subtitle: Text('free'.tr()),
                           ),

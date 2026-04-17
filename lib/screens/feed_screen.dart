@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import '../widgets/filter_chip.dart';
+import '../constants/app_colors.dart';
 import 'comments_screen.dart';
 import 'create_screen.dart';
 import 'settings_screen.dart';
@@ -27,18 +28,6 @@ class _FeedScreenState extends State<FeedScreen> {
   String _selectedFilter = 'all';
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
-
-  final Map<String, String> _filterMap = {
-    'all': 'all',
-    'cars': 'سيارات',
-    'workshops': 'ورش صيانة',
-    'inspection': 'مراكز فحص',
-    'films': 'أفلام حماية',
-    'painting': 'سمكرة ودهان',
-    'electric': 'كهرباء سيارات',
-    'tires': 'إطارات',
-    'spare_parts': 'قطع غيار',
-  };
 
   late final Stream<QuerySnapshot> _postsStream;
   late final Stream<QuerySnapshot> _storiesStream;
@@ -65,10 +54,7 @@ class _FeedScreenState extends State<FeedScreen> {
         .orderBy('createdAt', descending: true);
 
     if (_selectedFilter != 'all') {
-      final serviceName = _filterMap[_selectedFilter] ?? '';
-      if (serviceName.isNotEmpty) {
-        query = query.where('service', isEqualTo: serviceName);
-      }
+      query = query.where('serviceKey', isEqualTo: _selectedFilter);
     }
 
     return query.snapshots();
@@ -117,40 +103,35 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
         title: Text('app_name'.tr()),
         centerTitle: true,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
-          // أيقونة المفضلة (جديدة)
           IconButton(
-            icon: const Icon(Icons.favorite_border),
+            icon: Icon(Icons.favorite_border,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               Navigator.pushNamed(context, '/favorites');
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: Icon(Icons.settings_outlined,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => SettingsScreen(
-                    onThemeChanged: (isDarkMode) {},
-                    currentTheme:
-                        Theme.of(context).brightness == Brightness.dark,
-                    onLanguageChanged: (locale) {
-                      context.setLocale(locale);
-                    },
-                    currentLocale: context.locale,
-                  ),
-                ),
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
@@ -164,10 +145,8 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: Text(
-                        'logout'.tr(),
-                        style: const TextStyle(color: Colors.red),
-                      ),
+                      child: Text('logout'.tr(),
+                          style: const TextStyle(color: Colors.red)),
                     ),
                   ],
                 ),
@@ -177,7 +156,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 await FirebaseAuth.instance.signOut();
                 if (mounted) {
                   Navigator.pushAndRemoveUntil(
-                    // ignore: use_build_context_synchronously
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
@@ -205,11 +183,14 @@ class _FeedScreenState extends State<FeedScreen> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor:
+                        isDark ? Colors.grey.shade800 : Colors.grey.shade100,
                   ),
                 ),
               ),
             ),
+
+            // الفلاتر (4 أيقونات فقط)
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 85,
@@ -245,60 +226,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       },
                     ),
                     FilterChipWidget(
-                      icon: Icons.search,
-                      label: 'inspection'.tr(),
-                      isSelected: _selectedFilter == 'inspection',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'inspection');
-                        _showFilterMessage(context, 'inspection'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.movie,
-                      label: 'films'.tr(),
-                      isSelected: _selectedFilter == 'films',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'films');
-                        _showFilterMessage(context, 'films'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.brush,
-                      label: 'painting'.tr(),
-                      isSelected: _selectedFilter == 'painting',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'painting');
-                        _showFilterMessage(context, 'painting'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.electrical_services,
-                      label: 'electric'.tr(),
-                      isSelected: _selectedFilter == 'electric',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'electric');
-                        _showFilterMessage(context, 'electric'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.tire_repair,
-                      label: 'tires'.tr(),
-                      isSelected: _selectedFilter == 'tires',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'tires');
-                        _showFilterMessage(context, 'tires'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.handyman,
-                      label: 'spare_parts'.tr(),
-                      isSelected: _selectedFilter == 'spare_parts',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'spare_parts');
-                        _showFilterMessage(context, 'spare_parts'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
                       icon: Icons.more_horiz,
                       label: 'more'.tr(),
                       isSelected: false,
@@ -308,6 +235,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
+
             SliverToBoxAdapter(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _storiesStream,
@@ -338,21 +266,24 @@ class _FeedScreenState extends State<FeedScreen> {
                 },
               ),
             ),
+
             SliverToBoxAdapter(
               child: Card(
                 margin: const EdgeInsets.all(12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
+                color: isDark ? AppColors.darkSurface : Colors.white,
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: const Color(0xFF0A2E5C),
+                    backgroundColor: Theme.of(context).primaryColor,
                     child: Text(
                       user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
                   title: Text('what_to_post'.tr(),
-                      style: const TextStyle(color: Colors.grey)),
+                      style: TextStyle(
+                          color: isDark ? Colors.grey.shade400 : Colors.grey)),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -362,6 +293,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
+
             StreamBuilder<QuerySnapshot>(
               stream: _postsStream,
               builder: (context, snapshot) {
@@ -379,7 +311,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
                 final posts = snapshot.data?.docs ?? [];
 
-                // حفظ المنشورات في الكاش
                 if (posts.isNotEmpty) {
                   final postsData = posts.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -400,7 +331,10 @@ class _FeedScreenState extends State<FeedScreen> {
                         child: Text(
                           'no_posts'.tr(),
                           style: TextStyle(
-                              fontSize: 16, color: Colors.grey.shade600),
+                              fontSize: 16,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600),
                         ),
                       ),
                     ),
@@ -428,6 +362,8 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Widget _buildAddStoryCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => _pickAndUploadStory(context),
       child: Container(
@@ -437,13 +373,16 @@ class _FeedScreenState extends State<FeedScreen> {
           children: [
             Stack(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
-                  backgroundColor: Colors.grey,
+                  backgroundColor:
+                      isDark ? Colors.grey.shade800 : Colors.grey.shade200,
                   child: CircleAvatar(
                     radius: 28,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.add, color: Color(0xFF0A2E5C), size: 30),
+                    backgroundColor:
+                        isDark ? AppColors.darkSurface : Colors.white,
+                    child: Icon(Icons.add,
+                        color: Theme.of(context).primaryColor, size: 30),
                   ),
                 ),
                 Positioned(
@@ -461,7 +400,10 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            Text('your_story'.tr(), style: const TextStyle(fontSize: 11)),
+            Text('your_story'.tr(),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white70 : Colors.black87)),
           ],
         ),
       ),
@@ -469,6 +411,8 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   Widget _buildStoryCard(String name, String photoUrl, String mediaUrl) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () {
         _showStoryViewer(mediaUrl);
@@ -503,7 +447,9 @@ class _FeedScreenState extends State<FeedScreen> {
             const SizedBox(height: 4),
             Text(
               name,
-              style: const TextStyle(fontSize: 11),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white70 : Colors.black87),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -552,10 +498,12 @@ class _FeedScreenState extends State<FeedScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isLiked =
         (data['likes'] as List?)?.contains(currentUser?.uid) ?? false;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDark ? AppColors.darkSurface : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -564,7 +512,7 @@ class _FeedScreenState extends State<FeedScreen> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: const Color(0xFF0A2E5C),
+                  backgroundColor: Theme.of(context).primaryColor,
                   backgroundImage:
                       data['userPhoto'] != null && data['userPhoto'].isNotEmpty
                           ? NetworkImage(data['userPhoto'])
@@ -584,19 +532,26 @@ class _FeedScreenState extends State<FeedScreen> {
                     children: [
                       Text(
                         data['userName'] ?? 'مستخدم',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
                       Text(
                         data['service'] ?? '',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600),
+                            fontSize: 12,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.more_vert),
+                  icon: Icon(Icons.more_vert,
+                      color: isDark ? Colors.white70 : Colors.grey.shade600),
                   onPressed: () {
                     _showPostOptions(context, postId, data['userId']);
                   },
@@ -606,22 +561,28 @@ class _FeedScreenState extends State<FeedScreen> {
             const SizedBox(height: 12),
             Text(
               data['title'] ?? '',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87),
             ),
             const SizedBox(height: 8),
             Text(
               data['description'] ?? '',
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : Colors.black87),
             ),
             if (data['price'] != null &&
                 data['price'].toString().isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 'السعر: ${data['price']} ج.م',
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0A2E5C)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
             ],
             if (data['mediaUrls'] != null &&
@@ -660,12 +621,15 @@ class _FeedScreenState extends State<FeedScreen> {
             Row(
               children: [
                 IconButton(
-                  icon: Icon(isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: isLiked ? Colors.red : null),
+                  icon: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: isLiked ? Colors.red : null,
+                  ),
                   onPressed: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
                       if (mounted) {
+                        // ignore: use_build_context_synchronously
                         _showLoginRequiredMessage(context);
                       }
                       return;
@@ -695,10 +659,13 @@ class _FeedScreenState extends State<FeedScreen> {
                     await postRef.update({'likes': likes});
                   },
                 ),
-                Text('${(data['likes'] as List?)?.length ?? 0}'),
+                Text('${(data['likes'] as List?)?.length ?? 0}',
+                    style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87)),
                 const SizedBox(width: 16),
                 IconButton(
-                  icon: const Icon(Icons.comment_outlined),
+                  icon: Icon(Icons.comment_outlined,
+                      color: isDark ? Colors.white70 : Colors.grey.shade700),
                   onPressed: () {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
@@ -712,14 +679,18 @@ class _FeedScreenState extends State<FeedScreen> {
                     );
                   },
                 ),
-                Text('${data['comments'] ?? 0}'),
+                Text('${data['comments'] ?? 0}',
+                    style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87)),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.share_outlined),
+                  icon: Icon(Icons.share_outlined,
+                      color: isDark ? Colors.white70 : Colors.grey.shade700),
                   onPressed: () => _showShareOptions(context, data),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.bookmark_border),
+                  icon: Icon(Icons.bookmark_border,
+                      color: isDark ? Colors.white70 : Colors.grey.shade700),
                   onPressed: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
@@ -776,11 +747,15 @@ class _FeedScreenState extends State<FeedScreen> {
   void _showPostOptions(BuildContext context, String postId, String ownerId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwner = currentUser?.uid == ownerId;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : Colors.white,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -928,6 +903,8 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _showShareOptions(BuildContext context, Map<String, dynamic> postData) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -935,6 +912,9 @@ class _FeedScreenState extends State<FeedScreen> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : Colors.white,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1120,6 +1100,8 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
   }
 
   void _showMoreServices(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -1127,6 +1109,9 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : Colors.white,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1138,23 +1123,38 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
                 spacing: 16,
                 runSpacing: 16,
                 children: [
+                  _buildServiceItem(Icons.brush, 'accessories'.tr(),
+                      Colors.purple, 'accessories'),
                   _buildServiceItem(
-                      Icons.brush, 'accessories'.tr(), Colors.purple),
-                  _buildServiceItem(Icons.air, 'exhaust'.tr(), Colors.brown),
+                      Icons.air, 'exhaust'.tr(), Colors.brown, 'exhaust'),
                   _buildServiceItem(
-                      Icons.settings, 'tuning'.tr(), Colors.orange),
-                  _buildServiceItem(Icons.ac_unit, 'ac'.tr(), Colors.cyan),
-                  _buildServiceItem(Icons.shield, 'coating'.tr(), Colors.green),
+                      Icons.settings, 'tuning'.tr(), Colors.orange, 'tuning'),
                   _buildServiceItem(
-                      Icons.description, 'license'.tr(), Colors.indigo),
+                      Icons.ac_unit, 'ac'.tr(), Colors.cyan, 'ac'),
                   _buildServiceItem(
-                      Icons.local_shipping, 'transport'.tr(), Colors.blueGrey),
-                  _buildServiceItem(Icons.school, 'driving'.tr(), Colors.teal),
-                  _buildServiceItem(Icons.store, 'dealership'.tr(), Colors.red),
+                      Icons.shield, 'coating'.tr(), Colors.green, 'coating'),
+                  _buildServiceItem(Icons.description, 'license'.tr(),
+                      Colors.indigo, 'license'),
+                  _buildServiceItem(Icons.local_shipping, 'transport'.tr(),
+                      Colors.blueGrey, 'transport'),
                   _buildServiceItem(
-                      Icons.money, 'finance'.tr(), const Color(0xFF2E7D32)),
+                      Icons.school, 'driving'.tr(), Colors.teal, 'driving'),
+                  _buildServiceItem(
+                      Icons.store, 'dealership'.tr(), Colors.red, 'dealership'),
+                  _buildServiceItem(Icons.money, 'finance'.tr(),
+                      const Color(0xFF2E7D32), 'finance'),
                   _buildServiceItem(Icons.security, 'insurance'.tr(),
-                      const Color(0xFF1565C0)),
+                      const Color(0xFF1565C0), 'insurance'),
+                  _buildServiceItem(
+                      Icons.movie, 'films'.tr(), Colors.purpleAccent, 'films'),
+                  _buildServiceItem(Icons.brush, 'painting'.tr(),
+                      Colors.deepOrange, 'painting'),
+                  _buildServiceItem(Icons.electrical_services, 'electric'.tr(),
+                      Colors.lightBlue, 'electric'),
+                  _buildServiceItem(
+                      Icons.tire_repair, 'tires'.tr(), Colors.brown, 'tires'),
+                  _buildServiceItem(Icons.handyman, 'spare_parts'.tr(),
+                      Colors.teal, 'spare_parts'),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1165,14 +1165,15 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
     );
   }
 
-  Widget _buildServiceItem(IconData icon, String label, Color color) {
+  Widget _buildServiceItem(
+      IconData icon, String label, Color color, String filterKey) {
     final Color colorWithAlpha = color.withValues(alpha: 0.1);
 
     return GestureDetector(
       onTap: () {
         Navigator.pop(context);
         setState(() {
-          _selectedFilter = label;
+          _selectedFilter = filterKey;
         });
         _showFilterMessage(context, label);
       },

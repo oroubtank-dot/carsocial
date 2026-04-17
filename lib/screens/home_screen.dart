@@ -86,7 +86,7 @@ class HomeContent extends StatelessWidget {
             child: Icon(
               icon,
               size: 28,
-              color: isDark ? Colors.grey.shade300 : AppColors.primary,
+              color: isDark ? AppColors.secondary : AppColors.primary,
             ),
           ),
           const SizedBox(height: 4),

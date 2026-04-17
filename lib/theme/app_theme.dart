@@ -11,12 +11,20 @@ class AppTheme {
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: Colors.white,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.primary,
       foregroundColor: Colors.white,
       centerTitle: true,
       elevation: 0,
+    ),
+    iconTheme: const IconThemeData(color: AppColors.primary),
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(color: Colors.black87),
+      bodyMedium: TextStyle(color: Colors.black87),
+      titleLarge: TextStyle(color: Colors.black87),
     ),
     cardTheme: const CardThemeData(
       color: Colors.white,
@@ -38,6 +46,14 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+    ),
   );
 
   static ThemeData darkTheme = ThemeData(
@@ -49,12 +65,20 @@ class AppTheme {
       primary: AppColors.darkBlue,
       secondary: AppColors.secondary,
       surface: AppColors.darkSurface,
+      onPrimary: Colors.white,
+      onSecondary: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.darkSurface,
       foregroundColor: Colors.white,
       centerTitle: true,
       elevation: 0,
+    ),
+    iconTheme: const IconThemeData(color: AppColors.secondary),
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(color: Colors.white),
+      bodyMedium: TextStyle(color: Colors.white70),
+      titleLarge: TextStyle(color: Colors.white),
     ),
     cardTheme: const CardThemeData(
       color: AppColors.darkSurface,
@@ -74,6 +98,14 @@ class AppTheme {
         foregroundColor: AppColors.secondary,
         side: const BorderSide(color: AppColors.secondary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppColors.darkSurface,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
       ),
     ),
   );

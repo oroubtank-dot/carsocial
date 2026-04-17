@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:easy_localization/easy_localization.dart';
-import '../services/biometric_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
@@ -106,19 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
-  }
-
-  Future<void> _handleBiometricLogin() async {
-    final authenticated = await BiometricService.authenticate(
-      reason: 'login_biometric'.tr(),
-    );
-    if (authenticated && mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (route) => false,
-      );
-    }
   }
 
   Widget _buildSocialButton({
@@ -308,11 +294,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 24,
                             child: CircularProgressIndicator(
                                 color: Colors.white, strokeWidth: 2))
-                        : Text(
-                            _isPasswordStep ? 'sign_in'.tr() : 'next'.tr(),
+                        : Text(_isPasswordStep ? 'sign_in'.tr() : 'next'.tr(),
                             style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                                fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 if (!_isPasswordStep) ...[
@@ -350,32 +334,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     iconColor: Colors.black,
                   ),
                   const SizedBox(height: 24),
-                  FutureBuilder<bool>(
-                    future: BiometricService.canCheckBiometrics(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || !snapshot.data!) {
-                        return const SizedBox();
-                      }
-
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton.icon(
-                          onPressed: _handleBiometricLogin,
-                          icon: const Icon(Icons.fingerprint,
-                              color: Color(0xFF0066CC)),
-                          label: Text('login_with_biometric'.tr()),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF0066CC),
-                            side: const BorderSide(color: Color(0xFF0066CC)),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 50,
