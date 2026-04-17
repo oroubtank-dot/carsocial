@@ -189,8 +189,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
-            // الفلاتر (4 أيقونات فقط)
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 85,
@@ -235,7 +233,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
             SliverToBoxAdapter(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _storiesStream,
@@ -266,7 +263,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 },
               ),
             ),
-
             SliverToBoxAdapter(
               child: Card(
                 margin: const EdgeInsets.all(12),
@@ -293,7 +289,6 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
               ),
             ),
-
             StreamBuilder<QuerySnapshot>(
               stream: _postsStream,
               builder: (context, snapshot) {
@@ -629,7 +624,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
                       if (mounted) {
-                        // ignore: use_build_context_synchronously
                         _showLoginRequiredMessage(context);
                       }
                       return;

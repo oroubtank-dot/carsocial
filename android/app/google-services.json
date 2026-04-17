@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1084647387259",
+    "project_id": "carsocial-6b3ef",
+    "storage_bucket": "carsocial-6b3ef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1084647387259:android:10c53d35e293a2be9132de",
+        "android_client_info": {
+          "package_name": "com.carsocial.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1084647387259-c8qk3hsj5gh03rcq7g97fkt2c285vcub.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.carsocial.app",
+            "certificate_hash": "084672d1b22bb34cc75ab0136387dfc14b9773d6"
+          }
+        },
+        {
+          "client_id": "1084647387259-9j1pgr92reh5m36ulqachrfpoklsugb0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqVc5DnW8NO7Z533PNRo0zLc2q9NrkJjQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1084647387259-9j1pgr92reh5m36ulqachrfpoklsugb0.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
