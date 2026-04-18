@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../services/biometric_service.dart';
+import '../utils/toast_helper.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
@@ -17,12 +19,57 @@ class _LoginScreenState extends State<LoginScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
   bool _isPasswordStep = false;
+  bool _isBiometricEnabled = false;
+  bool _isLoadingBiometric = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricStatus();
+  }
+
+  Future<void> _loadBiometricStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final isEnabled = await BiometricService.isBiometricEnabled(user.uid);
+      setState(() {
+        _isBiometricEnabled = isEnabled;
+        _isLoadingBiometric = false;
+      });
+    } else {
+      setState(() => _isLoadingBiometric = false);
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    if (value) {
+      final authenticated = await BiometricService.authenticate(
+        reason: 'enable_biometric'.tr(),
+      );
+      if (authenticated) {
+        await BiometricService.setBiometricEnabled(user.uid, true);
+        setState(() => _isBiometricEnabled = true);
+        if (mounted) {
+          ToastHelper.showSuccess('تم تفعيل البصمة بنجاح');
+        }
+      }
+    } else {
+      await BiometricService.setBiometricEnabled(user.uid, false);
+      setState(() => _isBiometricEnabled = false);
+      if (mounted) {
+        ToastHelper.showWarning('تم إلغاء تفعيل البصمة');
+      }
+    }
+  }
 
   Future<void> _continueWithEmail() async {
     final email = _emailController.text.trim();
 
     if (email.isEmpty) {
-      _showSnackBar('please_enter_email'.tr());
+      ToastHelper.showWarning('please_enter_email'.tr());
       return;
     }
 
@@ -36,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     if (password.isEmpty) {
-      _showSnackBar('please_enter_password'.tr());
+      ToastHelper.showWarning('please_enter_password'.tr());
       return;
     }
 
@@ -50,6 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (_) => const HomeScreen()),
           (route) => false,
         );
+        ToastHelper.showSuccess('تم تسجيل الدخول بنجاح');
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -60,9 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         message = 'error_occurred'.tr();
       }
-      _showSnackBar(message);
+      ToastHelper.showError(message);
     } catch (e) {
-      _showSnackBar('unexpected_error'.tr());
+      ToastHelper.showError('unexpected_error'.tr());
     } finally {
       setState(() => _isLoading = false);
     }
@@ -71,25 +119,16 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      _showSnackBar('please_enter_email_first'.tr());
+      ToastHelper.showWarning('please_enter_email_first'.tr());
       return;
     }
 
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      _showSnackBar('reset_email_sent'.tr(), isError: false);
+      ToastHelper.showSuccess('reset_email_sent'.tr());
     } catch (e) {
-      _showSnackBar('error_check_email'.tr());
+      ToastHelper.showError('error_check_email'.tr());
     }
-  }
-
-  void _showSnackBar(String message, {bool isError = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-      ),
-    );
   }
 
   void _backToEmail() {
@@ -105,6 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
       MaterialPageRoute(builder: (_) => const HomeScreen()),
       (route) => false,
     );
+    ToastHelper.showInfo('الدخول كزائر');
   }
 
   Widget _buildSocialButton({
@@ -140,6 +180,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -316,24 +358,50 @@ class _LoginScreenState extends State<LoginScreen> {
                   _buildSocialButton(
                     icon: Icons.g_mobiledata,
                     label: 'sign_in_with_google'.tr(),
-                    onPressed: () => _showSnackBar('قريباً - Google Sign-In'),
+                    onPressed: () =>
+                        ToastHelper.showInfo('قريباً - Google Sign-In'),
                     iconColor: Colors.red,
                   ),
                   const SizedBox(height: 12),
                   _buildSocialButton(
                     icon: Icons.facebook,
                     label: 'sign_in_with_facebook'.tr(),
-                    onPressed: () => _showSnackBar('قريباً - Facebook Sign-In'),
+                    onPressed: () =>
+                        ToastHelper.showInfo('قريباً - Facebook Sign-In'),
                     iconColor: const Color(0xFF1877F2),
                   ),
                   const SizedBox(height: 12),
                   _buildSocialButton(
                     icon: Icons.apple,
                     label: 'sign_in_with_apple'.tr(),
-                    onPressed: () => _showSnackBar('قريباً - Apple Sign-In'),
+                    onPressed: () =>
+                        ToastHelper.showInfo('قريباً - Apple Sign-In'),
                     iconColor: Colors.black,
                   ),
                   const SizedBox(height: 24),
+                  if (!_isLoadingBiometric && user != null)
+                    FutureBuilder<bool>(
+                      future: BiometricService.canCheckBiometrics(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data == true) {
+                          return Column(
+                            children: [
+                              SwitchListTile(
+                                title: Text('login_with_biometric'.tr()),
+                                subtitle: Text('biometric_sub'.tr()),
+                                secondary: const Icon(Icons.fingerprint,
+                                    color: Color(0xFF0066CC)),
+                                value: _isBiometricEnabled,
+                                onChanged: _toggleBiometric,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 50,

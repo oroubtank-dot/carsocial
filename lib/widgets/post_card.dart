@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 import '../constants/app_colors.dart';
+import '../utils/toast_helper.dart';
 import '../screens/chat_screen.dart';
 
 class PostCard extends StatefulWidget {
@@ -66,7 +67,7 @@ class _PostCardState extends State<PostCard> {
   Future<void> _toggleSavePost() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      _showLoginRequiredMessage(context);
+      ToastHelper.showWarning('يجب تسجيل الدخول أولاً');
       return;
     }
 
@@ -82,9 +83,7 @@ class _PostCardState extends State<PostCard> {
         _isSaved = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ تم إزالة من المحفوظات')),
-        );
+        ToastHelper.showWarning('❌ تم إزالة من المحفوظات');
       }
     } else {
       await savedRef.set({
@@ -95,9 +94,7 @@ class _PostCardState extends State<PostCard> {
         _isSaved = true;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ تم الحفظ في المفضلة')),
-        );
+        ToastHelper.showSuccess('✅ تم الحفظ في المفضلة');
       }
     }
   }
@@ -106,7 +103,7 @@ class _PostCardState extends State<PostCard> {
       String otherUserName, String otherUserPhoto) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      _showLoginRequiredMessage(context);
+      ToastHelper.showWarning('يجب تسجيل الدخول أولاً');
       return;
     }
 
@@ -133,12 +130,6 @@ class _PostCardState extends State<PostCard> {
         ),
       );
     }
-  }
-
-  void _showLoginRequiredMessage(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('يجب تسجيل الدخول أولاً')),
-    );
   }
 
   @override
@@ -240,6 +231,7 @@ ${'download_app'.tr()}: CarSocial
       'rating': rating,
       'timestamp': FieldValue.serverTimestamp(),
     });
+    ToastHelper.showSuccess('تم تقييم المنشور بنجاح');
   }
 
   void _reportPost(BuildContext context, String postId) {
@@ -296,12 +288,7 @@ ${'download_app'.tr()}: CarSocial
     });
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('report_submitted'.tr()),
-          backgroundColor: Colors.green,
-        ),
-      );
+      ToastHelper.showSuccess('تم الإبلاغ عن المنشور بنجاح');
     }
   }
 
@@ -325,12 +312,14 @@ ${'download_app'.tr()}: CarSocial
   @override
   Widget build(BuildContext context) {
     final data = widget.post.data() as Map<String, dynamic>;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.all(8),
       elevation: 3,
       shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDark ? AppColors.darkSurface : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -351,9 +340,10 @@ ${'download_app'.tr()}: CarSocial
                     children: [
                       Text(
                         data['userName'] ?? 'مستخدم',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                       ),
                       Text(
@@ -362,7 +352,9 @@ ${'download_app'.tr()}: CarSocial
                             : 'الآن',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -409,12 +401,17 @@ ${'download_app'.tr()}: CarSocial
             const SizedBox(height: 12),
             Text(
               data['title'] ?? '',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87),
             ),
             const SizedBox(height: 8),
             Text(
               data['description'] ?? '',
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white70 : Colors.black87),
             ),
             if (data['price'] != null &&
                 data['price'].toString().isNotEmpty) ...[
@@ -424,7 +421,7 @@ ${'download_app'.tr()}: CarSocial
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: Theme.of(context).primaryColor,
                 ),
               ),
             ],
@@ -495,13 +492,17 @@ ${'download_app'.tr()}: CarSocial
                   icon: const Icon(Icons.favorite_border),
                   onPressed: () {},
                 ),
-                Text('${data['likes']?.length ?? 0}'),
+                Text('${data['likes']?.length ?? 0}',
+                    style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87)),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.comment_outlined),
                   onPressed: () {},
                 ),
-                Text('${data['comments'] ?? 0}'),
+                Text('${data['comments'] ?? 0}',
+                    style: TextStyle(
+                        color: isDark ? Colors.white70 : Colors.black87)),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.share_outlined),

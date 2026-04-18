@@ -23,8 +23,10 @@ import 'screens/community_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/followers_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,23 +97,15 @@ class MyApp extends StatelessWidget {
               '/feed': (context) => const FeedScreen(),
               '/settings': (context) => const SettingsScreen(),
               '/onboarding': (context) => const OnboardingScreen(),
+              '/followers': (context) => const FollowersScreen(
+                    userId: '',
+                    userName: '',
+                    userPhoto: '',
+                  ),
             },
           );
         },
       ),
-    );
-  }
-}
-
-// LoginScreen placeholder
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: const Center(child: Text('Login Screen')),
     );
   }
 }

@@ -1,0 +1,37 @@
+class AppStrings {
+  static const String appName = 'CarSocial';
+  static const String login = 'login';
+  static const String register = 'register';
+  static const String logout = 'logout';
+  static const String home = 'home';
+  static const String feed = 'feed';
+  static const String profile = 'profile';
+  static const String settings = 'settings';
+  static const String addPost = 'add_post';
+  static const String editPost = 'edit_post';
+  static const String deletePost = 'delete_post';
+  static const String reportPost = 'report_post';
+  static const String save = 'save';
+  static const String cancel = 'cancel';
+  static const String delete = 'delete';
+  static const String confirm = 'confirm';
+  static const String noPosts = 'no_posts';
+  static const String searchHint = 'search_hint';
+  static const String whatToPost = 'what_to_post';
+  static const String favorites = 'favorites';
+  static const String messages = 'messages';
+  static const String services = 'services';
+  static const String wanted = 'wanted';
+  static const String subscription = 'subscription';
+  static const String leaderboard = 'leaderboard';
+  static const String community = 'community';
+  static const String carReport = 'car_report';
+  static const String notifications = 'notifications';
+  static const String stories = 'stories';
+  static const String comments = 'comments';
+  static const String share = 'share';
+  static const String like = 'like';
+  static const String rating = 'rating';
+  static const String points = 'points';
+  static const String level = 'level';
+}

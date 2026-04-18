@@ -7,13 +7,13 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
-import '../widgets/filter_chip.dart';
+import '../widgets/responsive_service_icons.dart';
 import '../constants/app_colors.dart';
+import '../utils/toast_helper.dart';
 import 'comments_screen.dart';
 import 'create_screen.dart';
 import 'settings_screen.dart';
 import 'login_screen.dart';
-import '../services/cache_service.dart';
 import '../services/points_service.dart';
 
 class FeedScreen extends StatefulWidget {
@@ -29,13 +29,21 @@ class _FeedScreenState extends State<FeedScreen> {
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
       GlobalKey<RefreshIndicatorState>();
 
-  late final Stream<QuerySnapshot> _postsStream;
+  // Infinite Scroll variables
+  List<QueryDocumentSnapshot> _posts = [];
+  DocumentSnapshot? _lastDoc;
+  bool _isLoading = false;
+  bool _hasMore = true;
+  bool _isFirstLoad = true;
+  final ScrollController _scrollController = ScrollController();
+
   late final Stream<QuerySnapshot> _storiesStream;
 
   @override
   void initState() {
     super.initState();
-    _postsStream = _getPostsStream();
+    _loadPosts();
+    _scrollController.addListener(_onScroll);
     _storiesStream = FirebaseFirestore.instance
         .collection('stories')
         .where('expiresAt', isGreaterThan: Timestamp.now())
@@ -45,19 +53,96 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Stream<QuerySnapshot> _getPostsStream() {
-    var query = FirebaseFirestore.instance
-        .collection('posts')
-        .orderBy('createdAt', descending: true);
-
-    if (_selectedFilter != 'all') {
-      query = query.where('serviceKey', isEqualTo: _selectedFilter);
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMorePosts();
     }
+  }
 
-    return query.snapshots();
+  Future<void> _loadPosts() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('posts')
+          .orderBy('createdAt', descending: true);
+
+      if (_selectedFilter != 'all') {
+        query = query.where('serviceKey', isEqualTo: _selectedFilter);
+      }
+
+      final snapshot = await query.limit(20).get();
+
+      setState(() {
+        _posts = snapshot.docs;
+        _lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+        _hasMore = snapshot.docs.length == 20;
+        _isFirstLoad = false;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('خطأ في تحميل المنشورات: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMorePosts() async {
+    if (_isLoading || !_hasMore || _lastDoc == null) return;
+    setState(() => _isLoading = true);
+
+    try {
+      Query query = FirebaseFirestore.instance
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .startAfterDocument(_lastDoc!);
+
+      if (_selectedFilter != 'all') {
+        query = query.where('serviceKey', isEqualTo: _selectedFilter);
+      }
+
+      final snapshot = await query.limit(20).get();
+
+      setState(() {
+        _posts.addAll(snapshot.docs);
+        _lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+        _hasMore = snapshot.docs.length == 20;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('خطأ في تحميل المزيد: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _refreshPosts() async {
+    setState(() {
+      _posts = [];
+      _lastDoc = null;
+      _hasMore = true;
+      _isFirstLoad = true;
+    });
+    await _loadPosts();
+  }
+
+  void _refreshFilter(String filter) {
+    setState(() {
+      _selectedFilter = filter;
+      _posts = [];
+      _lastDoc = null;
+      _hasMore = true;
+      _isFirstLoad = true;
+    });
+    _loadPosts();
+  }
+
+  void _showFilterMessage(String label) {
+    ToastHelper.showInfo('تم اختيار: $label');
   }
 
   Future<void> _sendNotification({
@@ -80,30 +165,12 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  bool _isValidPost(Map<String, dynamic> data) {
-    return data['title'] != null &&
-        data['title'].toString().length <= 100 &&
-        data['description'] != null &&
-        data['description'].toString().length <= 1000 &&
-        (data['price'] == null || data['price'].toString().length <= 20);
-  }
-
-  Future<void> _refreshData() async {
-    setState(() {
-      _postsStream = _getPostsStream();
-      _storiesStream = FirebaseFirestore.instance
-          .collection('stories')
-          .where('expiresAt', isGreaterThan: Timestamp.now())
-          .orderBy('createdAt', descending: true)
-          .snapshots();
-    });
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWeb = screenWidth > 900;
 
     return Scaffold(
       appBar: AppBar(
@@ -160,6 +227,7 @@ class _FeedScreenState extends State<FeedScreen> {
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
                   );
+                  ToastHelper.showSuccess('تم تسجيل الخروج');
                 }
               }
             },
@@ -168,191 +236,267 @@ class _FeedScreenState extends State<FeedScreen> {
       ),
       body: RefreshIndicator(
         key: _refreshIndicatorKey,
-        onRefresh: _refreshData,
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'search_hint'.tr(),
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor:
-                        isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 85,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  children: [
-                    FilterChipWidget(
-                      icon: Icons.home,
-                      label: 'all'.tr(),
-                      isSelected: _selectedFilter == 'all',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'all');
-                        _showFilterMessage(context, 'all'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.directions_car,
-                      label: 'cars'.tr(),
-                      isSelected: _selectedFilter == 'cars',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'cars');
-                        _showFilterMessage(context, 'cars'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.build,
-                      label: 'workshops'.tr(),
-                      isSelected: _selectedFilter == 'workshops',
-                      onTap: () {
-                        setState(() => _selectedFilter = 'workshops');
-                        _showFilterMessage(context, 'workshops'.tr());
-                      },
-                    ),
-                    FilterChipWidget(
-                      icon: Icons.more_horiz,
-                      label: 'more'.tr(),
-                      isSelected: false,
-                      onTap: () => _showMoreServices(context),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _storiesStream,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return SizedBox(
-                    height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      children: [
-                        _buildAddStoryCard(),
-                        if (snapshot.hasData && snapshot.data != null)
-                          ...snapshot.data!.docs.map((doc) {
-                            final data = doc.data() as Map<String, dynamic>;
-                            return _buildStoryCard(
-                              data['userName'] ?? 'مستخدم',
-                              data['userPhoto'] ?? '',
-                              data['mediaUrl'] ?? '',
-                            );
-                          }),
+        onRefresh: _refreshPosts,
+        child: isWeb
+            ? Row(
+                children: [
+                  Expanded(
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      slivers: [
+                        _buildSearchBar(isDark),
+                        _buildStoriesSection(),
+                        _buildCreatePostCard(user, isDark),
+                        _buildPostsList(),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Card(
-                margin: const EdgeInsets.all(12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                color: isDark ? AppColors.darkSurface : Colors.white,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    child: Text(
-                      user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
-                      style: const TextStyle(color: Colors.white),
-                    ),
                   ),
-                  title: Text('what_to_post'.tr(),
-                      style: TextStyle(
-                          color: isDark ? Colors.grey.shade400 : Colors.grey)),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CreateScreen()),
-                    );
-                  },
+                  ResponsiveServiceIcons(
+                    selectedFilter: _selectedFilter,
+                    onFilterSelected: _refreshFilter,
+                    showFilterMessage: _showFilterMessage,
+                  ),
+                ],
+              )
+            : CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  _buildSearchBar(isDark),
+                  _buildHorizontalFilters(),
+                  _buildStoriesSection(),
+                  _buildCreatePostCard(user, isDark),
+                  _buildPostsList(),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(bool isDark) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: 'search_hint'.tr(),
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalFilters() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    int visibleCount = 3;
+
+    if (screenWidth > 600) {
+      visibleCount = 5;
+    }
+
+    final allServices = _getHorizontalServices();
+    final visibleServices = allServices.take(visibleCount).toList();
+    final hasMore = allServices.length > visibleCount;
+
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 85,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          children: [
+            ...visibleServices.map((service) => _buildHorizontalIconItem(
+                  icon: service['icon'],
+                  label: service['label'],
+                  color: service['color'],
+                  isSelected: _selectedFilter == service['filterKey'],
+                  filterKey: service['filterKey'],
+                )),
+            if (hasMore)
+              _buildHorizontalIconItem(
+                icon: Icons.more_horiz,
+                label: 'more'.tr(),
+                color: Colors.grey,
+                isSelected: false,
+                filterKey: 'more',
+                onTap: () => _showMoreServicesDialog(),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHorizontalIconItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isSelected,
+    required String filterKey,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap ??
+          () {
+            _refreshFilter(filterKey);
+            _showFilterMessage(label);
+          },
+      child: Container(
+        width: 70,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isSelected
+                      ? [color, color.withValues(alpha: 0.8)]
+                      : [
+                          color.withValues(alpha: 0.1),
+                          color.withValues(alpha: 0.05)
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: color.withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Icon(
+                icon,
+                size: 24,
+                color: isSelected ? Colors.white : color,
               ),
             ),
-            StreamBuilder<QuerySnapshot>(
-              stream: _postsStream,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return SliverToBoxAdapter(
-                    child: Center(child: Text('حدث خطأ: ${snapshot.error}')),
-                  );
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverToBoxAdapter(
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                final posts = snapshot.data?.docs ?? [];
-
-                if (posts.isNotEmpty) {
-                  final postsData = posts.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return {
-                      'id': doc.id,
-                      'data': data,
-                    };
-                  }).toList();
-                  CacheService.cachePosts(
-                      postsData.cast<Map<String, dynamic>>());
-                }
-
-                if (posts.isEmpty) {
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: Text(
-                          'no_posts'.tr(),
-                          style: TextStyle(
-                              fontSize: 16,
-                              color: isDark
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final post = posts[index];
-                    final data = post.data() as Map<String, dynamic>;
-
-                    if (!_isValidPost(data)) {
-                      return const SizedBox.shrink();
-                    }
-
-                    return _buildPostCard(data, post.id, context);
-                  }, childCount: posts.length),
-                );
-              },
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : Colors.grey.shade700,
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStoriesSection() {
+    return SliverToBoxAdapter(
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _storiesStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const SizedBox.shrink();
+          }
+
+          return SizedBox(
+            height: 100,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                _buildAddStoryCard(),
+                if (snapshot.hasData && snapshot.data != null)
+                  ...snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return _buildStoryCard(
+                      data['userName'] ?? 'مستخدم',
+                      data['userPhoto'] ?? '',
+                      data['mediaUrl'] ?? '',
+                    );
+                  }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCreatePostCard(User? user, bool isDark) {
+    return SliverToBoxAdapter(
+      child: Card(
+        margin: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: isDark ? AppColors.darkSurface : Colors.white,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Theme.of(context).primaryColor,
+            child: Text(
+              user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+          title: Text('what_to_post'.tr(),
+              style: TextStyle(
+                  color: isDark ? Colors.grey.shade400 : Colors.grey)),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateScreen()),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostsList() {
+    if (_isFirstLoad) {
+      return const SliverToBoxAdapter(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_posts.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Center(
+            child: Text(
+              'no_posts'.tr(),
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverList(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        if (index == _posts.length - 1 && _hasMore) {
+          return Column(
+            children: [
+              _buildPostCard(_posts[index].data() as Map<String, dynamic>,
+                  _posts[index].id),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          );
+        }
+        return _buildPostCard(
+            _posts[index].data() as Map<String, dynamic>, _posts[index].id);
+      }, childCount: _posts.length),
     );
   }
 
@@ -488,8 +632,7 @@ class _FeedScreenState extends State<FeedScreen> {
     );
   }
 
-  Widget _buildPostCard(
-      Map<String, dynamic> data, String postId, BuildContext context) {
+  Widget _buildPostCard(Map<String, dynamic> data, String postId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isLiked =
         (data['likes'] as List?)?.contains(currentUser?.uid) ?? false;
@@ -624,7 +767,8 @@ class _FeedScreenState extends State<FeedScreen> {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
                       if (mounted) {
-                        _showLoginRequiredMessage(context);
+                        // ignore: use_build_context_synchronously
+                        _showLoginRequiredMessage();
                       }
                       return;
                     }
@@ -647,6 +791,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         );
                         await PointsService.addPoints(
                             data['userId'], 1, 'تم الإعجاب بمنشورك');
+                        ToastHelper.showSuccess('تم الإعجاب');
                       }
                     }
 
@@ -663,7 +808,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   onPressed: () {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
-                      _showLoginRequiredMessage(context);
+                      _showLoginRequiredMessage();
                       return;
                     }
                     Navigator.push(
@@ -688,7 +833,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   onPressed: () async {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) {
-                      _showLoginRequiredMessage(context);
+                      _showLoginRequiredMessage();
                       return;
                     }
                     await _toggleSavePost(postId, user.uid);
@@ -715,11 +860,7 @@ class _FeedScreenState extends State<FeedScreen> {
       if (doc.exists) {
         await saveRef.delete();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تم إزالة من المحفوظات'),
-                duration: Duration(seconds: 1)),
-          );
+          ToastHelper.showWarning('تم إزالة من المحفوظات');
         }
       } else {
         await saveRef.set({
@@ -727,10 +868,7 @@ class _FeedScreenState extends State<FeedScreen> {
           'savedAt': FieldValue.serverTimestamp(),
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تم الحفظ'), duration: Duration(seconds: 1)),
-          );
+          ToastHelper.showSuccess('تم الحفظ في المفضلة');
         }
       }
     } catch (e) {
@@ -810,17 +948,11 @@ class _FeedScreenState extends State<FeedScreen> {
             .doc(postId)
             .delete();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تم حذف المنشور بنجاح'),
-                backgroundColor: Colors.green),
-          );
+          ToastHelper.showSuccess('تم حذف المنشور بنجاح');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
-          );
+          ToastHelper.showError('حدث خطأ: ${e.toString()}');
         }
       }
     }
@@ -859,41 +991,18 @@ class _FeedScreenState extends State<FeedScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تم الإبلاغ عن المنشور، شكراً لك'),
-                backgroundColor: Colors.green),
-          );
+          ToastHelper.showSuccess('تم الإبلاغ عن المنشور، شكراً لك');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
-          );
+          ToastHelper.showError('حدث خطأ: ${e.toString()}');
         }
       }
     }
   }
 
-  void _showLoginRequiredMessage(BuildContext context) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('login_required'.tr()),
-        backgroundColor: Colors.orange,
-        action: SnackBarAction(
-          label: 'تسجيل الدخول'.tr(),
-          onPressed: () {
-            if (mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            }
-          },
-        ),
-      ),
-    );
+  void _showLoginRequiredMessage() {
+    ToastHelper.showWarning('يجب تسجيل الدخول أولاً');
   }
 
   void _showShareOptions(BuildContext context, Map<String, dynamic> postData) {
@@ -967,16 +1076,13 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
   void _copyLink(BuildContext context) {
     Clipboard.setData(
         const ClipboardData(text: 'https://carsocial.app/post/123'));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('link_copied'.tr()), backgroundColor: Colors.green),
-    );
+    ToastHelper.showSuccess('تم نسخ الرابط');
   }
 
   Future<void> _pickAndUploadStory(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      _showLoginRequiredMessage(context);
+      _showLoginRequiredMessage();
       return;
     }
 
@@ -1047,53 +1153,22 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('story_added'.tr()), backgroundColor: Colors.green),
-        );
+        ToastHelper.showSuccess('story_added'.tr());
       }
     } on FirebaseException catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        String message;
-        switch (e.code) {
-          case 'storage/unauthorized':
-            message = 'غير مصرح لك برفع الملفات';
-            break;
-          case 'storage/canceled':
-            message = 'تم إلغاء الرفع';
-            break;
-          case 'storage/quota-exceeded':
-            message = 'تم تجاوز مساحة التخزين';
-            break;
-          default:
-            message = 'حدث خطأ: ${e.message}';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
+        ToastHelper.showError('خطأ: ${e.message}');
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('${'story_failed'.tr()}: $e'),
-              backgroundColor: Colors.red),
-        );
+        ToastHelper.showError('story_failed'.tr());
       }
     }
   }
 
-  void _showFilterMessage(BuildContext context, String filterName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('${'selected'.tr()}: $filterName'),
-          duration: const Duration(seconds: 1)),
-    );
-  }
-
-  void _showMoreServices(BuildContext context) {
+  void _showMoreServicesDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showModalBottomSheet(
@@ -1116,40 +1191,14 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
               Wrap(
                 spacing: 16,
                 runSpacing: 16,
-                children: [
-                  _buildServiceItem(Icons.brush, 'accessories'.tr(),
-                      Colors.purple, 'accessories'),
-                  _buildServiceItem(
-                      Icons.air, 'exhaust'.tr(), Colors.brown, 'exhaust'),
-                  _buildServiceItem(
-                      Icons.settings, 'tuning'.tr(), Colors.orange, 'tuning'),
-                  _buildServiceItem(
-                      Icons.ac_unit, 'ac'.tr(), Colors.cyan, 'ac'),
-                  _buildServiceItem(
-                      Icons.shield, 'coating'.tr(), Colors.green, 'coating'),
-                  _buildServiceItem(Icons.description, 'license'.tr(),
-                      Colors.indigo, 'license'),
-                  _buildServiceItem(Icons.local_shipping, 'transport'.tr(),
-                      Colors.blueGrey, 'transport'),
-                  _buildServiceItem(
-                      Icons.school, 'driving'.tr(), Colors.teal, 'driving'),
-                  _buildServiceItem(
-                      Icons.store, 'dealership'.tr(), Colors.red, 'dealership'),
-                  _buildServiceItem(Icons.money, 'finance'.tr(),
-                      const Color(0xFF2E7D32), 'finance'),
-                  _buildServiceItem(Icons.security, 'insurance'.tr(),
-                      const Color(0xFF1565C0), 'insurance'),
-                  _buildServiceItem(
-                      Icons.movie, 'films'.tr(), Colors.purpleAccent, 'films'),
-                  _buildServiceItem(Icons.brush, 'painting'.tr(),
-                      Colors.deepOrange, 'painting'),
-                  _buildServiceItem(Icons.electrical_services, 'electric'.tr(),
-                      Colors.lightBlue, 'electric'),
-                  _buildServiceItem(
-                      Icons.tire_repair, 'tires'.tr(), Colors.brown, 'tires'),
-                  _buildServiceItem(Icons.handyman, 'spare_parts'.tr(),
-                      Colors.teal, 'spare_parts'),
-                ],
+                children: _getAllServices().map((service) {
+                  return _buildServiceItem(
+                    icon: service['icon'],
+                    label: service['label'],
+                    color: service['color'],
+                    filterKey: service['filterKey'],
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 20),
             ],
@@ -1159,30 +1208,215 @@ ${price.isNotEmpty ? '💰 السعر: $price ج.م\n' : ''}
     );
   }
 
-  Widget _buildServiceItem(
-      IconData icon, String label, Color color, String filterKey) {
-    final Color colorWithAlpha = color.withValues(alpha: 0.1);
-
+  Widget _buildServiceItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required String filterKey,
+  }) {
     return GestureDetector(
       onTap: () {
         Navigator.pop(context);
-        setState(() {
-          _selectedFilter = filterKey;
-        });
-        _showFilterMessage(context, label);
+        _refreshFilter(filterKey);
+        _showFilterMessage(label);
       },
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration:
-                BoxDecoration(color: colorWithAlpha, shape: BoxShape.circle),
-            child: Icon(icon, size: 28, color: color),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withValues(alpha: 0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 28, color: Colors.white),
           ),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(fontSize: 11)),
         ],
       ),
     );
+  }
+
+  List<Map<String, dynamic>> _getHorizontalServices() {
+    return [
+      {
+        'icon': Icons.home,
+        'label': 'all'.tr(),
+        'filterKey': 'all',
+        'color': AppColors.primary
+      },
+      {
+        'icon': Icons.directions_car,
+        'label': 'cars'.tr(),
+        'filterKey': 'cars',
+        'color': Colors.blue
+      },
+      {
+        'icon': Icons.build,
+        'label': 'workshops'.tr(),
+        'filterKey': 'workshops',
+        'color': Colors.orange
+      },
+      {
+        'icon': Icons.movie,
+        'label': 'films'.tr(),
+        'filterKey': 'films',
+        'color': Colors.purple
+      },
+      {
+        'icon': Icons.brush,
+        'label': 'painting'.tr(),
+        'filterKey': 'painting',
+        'color': Colors.red
+      },
+      {
+        'icon': Icons.electrical_services,
+        'label': 'electric'.tr(),
+        'filterKey': 'electric',
+        'color': Colors.amber
+      },
+      {
+        'icon': Icons.tire_repair,
+        'label': 'tires'.tr(),
+        'filterKey': 'tires',
+        'color': Colors.brown
+      },
+      {
+        'icon': Icons.handyman,
+        'label': 'spare_parts'.tr(),
+        'filterKey': 'spare_parts',
+        'color': Colors.teal
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getAllServices() {
+    return [
+      {
+        'icon': Icons.home,
+        'label': 'الكل',
+        'filterKey': 'all',
+        'color': AppColors.primary
+      },
+      {
+        'icon': Icons.directions_car,
+        'label': 'سيارات',
+        'filterKey': 'cars',
+        'color': Colors.blue
+      },
+      {
+        'icon': Icons.build,
+        'label': 'ورش صيانة',
+        'filterKey': 'workshops',
+        'color': Colors.orange
+      },
+      {
+        'icon': Icons.movie,
+        'label': 'أفلام حماية',
+        'filterKey': 'films',
+        'color': Colors.purple
+      },
+      {
+        'icon': Icons.brush,
+        'label': 'سمكرة ودهان',
+        'filterKey': 'painting',
+        'color': Colors.red
+      },
+      {
+        'icon': Icons.electrical_services,
+        'label': 'كهرباء',
+        'filterKey': 'electric',
+        'color': Colors.amber
+      },
+      {
+        'icon': Icons.tire_repair,
+        'label': 'إطارات',
+        'filterKey': 'tires',
+        'color': Colors.brown
+      },
+      {
+        'icon': Icons.handyman,
+        'label': 'قطع غيار',
+        'filterKey': 'spare_parts',
+        'color': Colors.teal
+      },
+      {
+        'icon': Icons.brush,
+        'label': 'اكسسوارات',
+        'filterKey': 'accessories',
+        'color': Colors.pink
+      },
+      {
+        'icon': Icons.air,
+        'label': 'عادم',
+        'filterKey': 'exhaust',
+        'color': Colors.grey
+      },
+      {
+        'icon': Icons.settings,
+        'label': 'تظبيط',
+        'filterKey': 'tuning',
+        'color': Colors.indigo
+      },
+      {
+        'icon': Icons.ac_unit,
+        'label': 'تكييف',
+        'filterKey': 'ac',
+        'color': Colors.cyan
+      },
+      {
+        'icon': Icons.shield,
+        'label': 'طلاء حماية',
+        'filterKey': 'coating',
+        'color': Colors.green
+      },
+      {
+        'icon': Icons.description,
+        'label': 'رخص',
+        'filterKey': 'license',
+        'color': Colors.deepPurple
+      },
+      {
+        'icon': Icons.local_shipping,
+        'label': 'نقل',
+        'filterKey': 'transport',
+        'color': Colors.blueGrey
+      },
+      {
+        'icon': Icons.school,
+        'label': 'تعليم قيادة',
+        'filterKey': 'driving',
+        'color': Colors.lime
+      },
+      {
+        'icon': Icons.store,
+        'label': 'معارض',
+        'filterKey': 'dealership',
+        'color': Colors.deepOrange
+      },
+      {
+        'icon': Icons.money,
+        'label': 'تمويل',
+        'filterKey': 'finance',
+        'color': Colors.green.shade700
+      },
+      {
+        'icon': Icons.security,
+        'label': 'تأمين',
+        'filterKey': 'insurance',
+        'color': Colors.blue.shade700
+      },
+    ];
   }
 }

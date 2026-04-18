@@ -4,35 +4,27 @@ import '../models/post_model.dart';
 class PostRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Stream<List<PostModel>> getPosts({String? filter}) {
-    Query query = _firestore
+  // جلب أول 20 منشور
+  Future<List<PostModel>> getPosts({int limit = 20}) async {
+    final snapshot = await _firestore
         .collection('posts')
-        .orderBy('createdAt', descending: true);
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
 
-    if (filter != null && filter != 'all') {
-      query = query.where('serviceKey', isEqualTo: filter);
-    }
-
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => PostModel.fromFirestore(doc)).toList();
-    });
+    return snapshot.docs.map((doc) => PostModel.fromFirestore(doc)).toList();
   }
 
-  Future<void> likePost(String postId, String userId) async {
-    final postRef = _firestore.collection('posts').doc(postId);
-    final post = await postRef.get();
-    final likes = List<String>.from(post.data()?['likes'] ?? []);
+  // جلب الدفعة التالية (بعد آخر منشور)
+  Future<List<PostModel>> getMorePosts(DocumentSnapshot lastDoc,
+      {int limit = 20}) async {
+    final snapshot = await _firestore
+        .collection('posts')
+        .orderBy('createdAt', descending: true)
+        .startAfterDocument(lastDoc)
+        .limit(limit)
+        .get();
 
-    if (likes.contains(userId)) {
-      likes.remove(userId);
-    } else {
-      likes.add(userId);
-    }
-
-    await postRef.update({'likes': likes});
-  }
-
-  Future<void> deletePost(String postId) async {
-    await _firestore.collection('posts').doc(postId).delete();
+    return snapshot.docs.map((doc) => PostModel.fromFirestore(doc)).toList();
   }
 }

@@ -7,7 +7,9 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import '../services/points_service.dart';
 import '../constants/app_colors.dart';
+import '../utils/toast_helper.dart';
 import 'login_screen.dart';
+import 'followers_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -31,12 +33,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   DateTime? _creationTime;
   int _points = 0;
   int _level = 1;
+  int _postsCount = 0;
+  int _followersCount = 0;
+  int _followingCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadPoints();
+    _loadStats();
   }
 
   Future<void> _loadUserData() async {
@@ -59,6 +65,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _level = pointsData['level'];
       });
     }
+  }
+
+  Future<void> _loadStats() async {
+    if (_user == null) return;
+
+    final postsSnapshot = await FirebaseFirestore.instance
+        .collection('posts')
+        .where('userId', isEqualTo: _user!.uid)
+        .get();
+    _postsCount = postsSnapshot.docs.length;
+
+    final followersSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user!.uid)
+        .collection('followers')
+        .get();
+    _followersCount = followersSnapshot.docs.length;
+
+    final followingSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_user!.uid)
+        .collection('following')
+        .get();
+    _followingCount = followingSnapshot.docs.length;
+
+    setState(() {});
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -87,17 +119,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('تم تحديث الصورة بنجاح'),
-                backgroundColor: Colors.green),
-          );
+          ToastHelper.showSuccess('تم تحديث الصورة بنجاح');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('حدث خطأ: $e'), backgroundColor: Colors.red),
-          );
+          ToastHelper.showError('حدث خطأ: $e');
         }
       } finally {
         if (mounted) {
@@ -117,14 +143,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
         );
+        ToastHelper.showSuccess('تم تسجيل الخروج');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('خطأ في تسجيل الخروج: $e'),
-              backgroundColor: Colors.red),
-        );
+        ToastHelper.showError('خطأ في تسجيل الخروج: $e');
       }
     } finally {
       if (mounted) {
@@ -133,9 +156,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Widget _buildStatButton(String label, int count) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('profile'.tr()),
+          centerTitle: true,
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_outline, size: 80, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text('يجب تسجيل الدخول أولاً'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: Text('تسجيل الدخول'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -159,6 +234,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onRefresh: () async {
                 await _loadUserData();
                 await _loadPoints();
+                await _loadStats();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -166,7 +242,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     const SizedBox(height: 20),
 
-                    // الصورة الشخصية
                     Center(
                       child: Stack(
                         children: [
@@ -221,7 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // الاسم
                     Text(
                       _displayName.isEmpty ? 'user'.tr() : _displayName,
                       style: TextStyle(
@@ -232,7 +306,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // الإيميل
                     Text(
                       _email,
                       style: TextStyle(
@@ -254,9 +327,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 16),
+
+                    // الإحصائيات (المنشورات - المتابعون - يتابعهم)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildStatButton('posts'.tr(), _postsCount),
+                        const SizedBox(width: 32),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FollowersScreen(
+                                  userId: _user!.uid,
+                                  userName: _displayName,
+                                  userPhoto: _photoURL,
+                                  initialTab: 'followers',
+                                ),
+                              ),
+                            );
+                          },
+                          child: _buildStatButton(
+                              'followers'.tr(), _followersCount),
+                        ),
+                        const SizedBox(width: 32),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FollowersScreen(
+                                  userId: _user!.uid,
+                                  userName: _displayName,
+                                  userPhoto: _photoURL,
+                                  initialTab: 'following',
+                                ),
+                              ),
+                            );
+                          },
+                          child: _buildStatButton(
+                              'following'.tr(), _followingCount),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
 
-                    // ========== بطاقة النقاط والمستوى ==========
+                    // بطاقة النقاط والمستوى
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(16),
@@ -282,7 +400,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       child: Row(
                         children: [
-                          // مستوى المستخدم
                           Container(
                             width: 60,
                             height: 60,
@@ -329,7 +446,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 8),
-                                // شريط التقدم للمستوى التالي
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: LinearProgressIndicator(
@@ -393,7 +509,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 24),
 
-                    // زر تسجيل الخروج
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: SizedBox(
